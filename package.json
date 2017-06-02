@@ -1,10 +1,10 @@
 {
-  "name": "atom-gitlab",
-  "main": "./lib/atom-gitlab",
+  "name": "gitlab-integration",
+  "main": "./lib/gitlab-integration",
   "version": "0.0.0",
-  "description": "A short description of your package",
-  "keywords": [],
-  "repository": "https://github.com/blakawk/atom-gitlab",
+  "description": "Track gitlab pipelines state of your project in Atom editor and more",
+  "keywords": ["ui", "gitlab", "git"],
+  "repository": "https://github.com/blakawk/gitlab-integration",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
