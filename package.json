@@ -1,0 +1,22 @@
+{
+  "name": "atom-gitlab",
+  "main": "./lib/atom-gitlab",
+  "version": "0.0.0",
+  "description": "A short description of your package",
+  "keywords": [],
+  "repository": "https://github.com/blakawk/atom-gitlab",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "consumedServices": {
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
+      }
+    }
+  },
+  "dependencies": {
+    "request": "^2.81.0"
+  }
+}
