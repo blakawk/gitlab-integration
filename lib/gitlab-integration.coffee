@@ -1,57 +1,85 @@
 {CompositeDisposable, File, Directory, TextEditor} = require 'atom'
 path = require 'path'
 StatusBarView = require './status-bar-view'
-GitlabStatus = require './gitlab-status'
+GitlabStatus = require './gitlab'
 
-module.exports = AtomGitlab =
+module.exports = GitlabIntegration =
     config:
-        gitlabHost:
-            title: 'Gitlab host'
-            description: 'Hostname of server where is stored gitlab'
+        host:
+            title: 'Gitlab API endpoint'
+            description: 'Hostname of server where to access Gitlab API'
             type: 'string'
             default: 'gitlab.com'
+        token:
+            title: 'Gitlab API token'
+            description: 'Token to access your Gitlab API'
+            type: 'string'
+            default: ''
+        period:
+            title: 'Polling period (ms)'
+            description: 'The interval at which gitlab will be polled'
+            minimum: 1000
+            default: 1000
+            type: 'integer'
 
     consumeStatusBar: (statusBar) ->
         @statusBar = statusBar
-        @statusBarView.onDisplay (view) =>
-            this.statusBarTile = this.statusBar.addRightTile
-                item: view, priority: -1
+        @statusBarView.onDisplay =>
+            @statusBarTile = @statusBar.addRightTile
+                item: @statusBarView, priority: -1
+        @statusBarView.onDispose =>
+            @statusBarTile.destroy()
 
     updateRepository: () ->
         currentPane = atom.workspace.getActivePaneItem()
-        currentPath = currentPane?.getPath?()
-        [ currentProject, _ ] = atom.project.relativizePath(currentPath)
-        if currentProject?
-            console.log currentProject, path.join(currentProject, '.gitlab-ci.yml')
-            new File(path.join(currentProject, '.gitlab-ci.yml'), false)
-                .exists()
-                .then((exists) ->
-                    console.log exists, path.join(currentProject, '.gitlab-ci.yml')
-                    if exists
-                        atom.project.repositoryForDirectory(new Directory(
-                            currentProject
-                        )).then((repository) =>
-                            if repository?
-                                console.log repository
-                                origin = repository.getOriginURL()
-                                re = new RegExp(
-                                    "^[^@]+@#{atom.config.get('gitlabHost')}"
-                                )
-                                console.log origin, re, re.test(origin)
-                                if re.test(origin) and origin isnt this.origin
-                                    this.origin = origin
-                                    this.gitlab.newOrigin(origin)
-                        )
-                )
-
+        if currentPane instanceof TextEditor
+            currentPath = currentPane?.getPath?()
+            [ currentProject, _ ] = atom.project.relativizePath(currentPath)
+            if currentProject?
+                new File(path.join(currentProject, '.gitlab-ci.yml'), false)
+                    .exists()
+                    .then((exists) =>
+                        if exists
+                            atom.project.repositoryForDirectory(new Directory(
+                                currentProject
+                            )).then((repository) =>
+                                if repository?
+                                    origin = repository.getOriginURL()
+                                    host = atom.config.get(
+                                        'gitlab-integration.host'
+                                    )
+                                    re = new RegExp("^[^@]+@#{host}")
+                                    if re.test(origin) and origin isnt @origin
+                                        @origin = origin
+                                        @gitlab.newOrigin(origin)
+                                    else if this.origin?
+                                        @origin = null
+                                        @gitlab.newOrigin(null)
+                                else if @origin?
+                                    @origin = null
+                                    @gitlab.newOrigin(null)
+                            )
+                        else if @origin?
+                            @origin = null
+                            @gitlab.newOrigin(null)
+                    )
+            else if @origin?
+                @origin = null
+                @gitlab.newOrigin(null)
 
     activate: (state) ->
         @subscriptions = new CompositeDisposable
         @statusBarView = new StatusBarView
-        @statusBarView.init
+        @statusBarView.init()
+        if not atom.config.get('gitlab-integration.token')
+            atom.notifications.addInfo(
+                "You likely forgot to configure your gitlab token",
+                {dismissable: true}
+            )
+        @subscriptions.add atom.config.onDidChange 'gitlab-integration.host',
+            => @updateRepository()
+        @subscriptions.add atom.config.onDidChange 'gitlab-integration.token', => @updateRepository()
         @gitlab = new GitlabStatus @statusBarView
-        atom.project.onDidChangePaths (paths) =>
-            console.log paths
         atom.workspace.observeActivePaneItem (editor) =>
             if editor instanceof TextEditor
                 @updateRepository()
@@ -59,5 +87,7 @@ module.exports = AtomGitlab =
                     @updateRepository()
 
     deactivate: ->
-        @subscriptions.dispose
-        @statusBarTile?.destroy
+        @subscriptions.dispose()
+        @gitlab?.deactivate()
+        @statusBarView?.deactivate()
+        @statusBarTile?.destroy()

@@ -1,24 +1,27 @@
-Request = require('request')
-
 class StatusBarView extends HTMLElement
     init: ->
         @classList.add('status-bar-gitlab', 'inline-block')
         @activate()
 
-    activate: ->
-        @intervalId = setInterval @update.bind(@), 1000
+    activate: => @displayed = false
+    deactivate: => @dispose() if @displayed
 
-        atom.config.get('atom-gitlab.gitlab-uri')
-        atom.config.get('atom-gitlab.gitlab-token')
+    onDisplay: (@display) ->
+    onDispose: (@dispose) ->
 
-    onDisplay: (callback) ->
-        @display = callback
+    hide: =>
+        @dispose() if @displayed
+        @displayed = false
 
-    deactivate: ->
-        clearInterval @intervalId
+    show: =>
+        @display(@) if not @displayed
+        @displayed = true
 
-    update: ->
-        @textContent = "gitlab"
+    update: (project) =>
+            @show()
+            @textContent = project
+
+
 
 module.exports = document.registerElement 'status-bar-gitlab',
     prototype: StatusBarView.prototype, extends: 'div'
