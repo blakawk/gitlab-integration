@@ -1,4 +1,4 @@
-request = require('request')
+fetch = require('isomorphic-fetch')
 
 class GitlabStatus
     constructor: (@view, @token=null, @timeout=null, @origin=null) ->
@@ -23,18 +23,53 @@ class GitlabStatus
         @timeout = setTimeout @update, atom.config.get('gitlab-integration.period')
 
     update: =>
-        @project = @origin.split(':')[1].split('/')[..1].join('/')
-        request({
-            url: "https://#{@host}/api/v4/projects",
+        project = @origin.split(':')[1].split('/')[..1].join('/')
+        if project isnt @project
+            fetch("https://#{@host}/api/v4/projects?membership=yes", {
+                headers: {
+                    "PRIVATE-TOKEN": @token,
+                }
+            }).then((res) =>
+                @project = project
+                res.json().then((answer) =>
+                    @onProject(answer.filter(
+                        (project) => project.path_with_namespace is @project
+                    )[0])
+                )
+            )
+
+    onProject: (project) =>
+        fetch("https://#{@host}/api/v4/projects/#{project.id}/pipelines", {
             headers: {
                 "PRIVATE-TOKEN": @token,
             }
-        }, (e, r, b) =>
-            @response({ error: e, response: r, body: b })
+        }).then((res) =>
+            res.json().then(
+                (answer) =>
+                    @onPipeline(project, answer[0])
+            )
         )
 
-    response: (answer) =>
-        console.log answer
+    onPipeline: (project, pipeline) =>
+        fetch("https://#{@host}/api/v4/projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs", {
+                headers: {
+                    "PRIVATE-TOKEN": @token,
+                }
+            }
+        ).then((res) =>
+            res.json().then(
+                (answer) =>
+                    @onJobs(answer.reduce(
+                        (stages, job) =>
+                            if not stages[job.stage]?
+                                stages[job.stage] = []
+                            stages[job.stage].concat([job])
+                    , {}))
+            )
+        )
+
+    onJobs: (stages) =>
+        console.log stages
         @view.update @project
         @restart()
 

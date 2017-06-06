@@ -3,7 +3,11 @@
   "main": "./lib/gitlab-integration",
   "version": "0.0.0",
   "description": "Track gitlab pipelines state of your project in Atom editor and more",
-  "keywords": ["ui", "gitlab", "git"],
+  "keywords": [
+    "ui",
+    "gitlab",
+    "git"
+  ],
   "repository": "https://github.com/blakawk/gitlab-integration",
   "license": "MIT",
   "engines": {
@@ -17,6 +21,6 @@
     }
   },
   "dependencies": {
-    "request": "^2.81.0"
+    "isomorphic-fetch": "^2.2.1"
   }
 }
