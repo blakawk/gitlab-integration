@@ -30,61 +30,59 @@ module.exports = GitlabIntegration =
         @statusBarView.onDispose =>
             @statusBarTile.destroy()
 
-    updateRepository: () ->
+    onPathChange: ->
         currentPane = atom.workspace.getActivePaneItem()
         if currentPane instanceof TextEditor
             currentPath = currentPane?.getPath?()
             [ currentProject, _ ] = atom.project.relativizePath(currentPath)
-            if currentProject?
-                new File(path.join(currentProject, '.gitlab-ci.yml'), false)
-                    .exists()
-                    .then((exists) =>
-                        if exists
-                            atom.project.repositoryForDirectory(new Directory(
-                                currentProject
-                            )).then((repository) =>
-                                if repository?
-                                    origin = repository.getOriginURL()
-                                    host = atom.config.get(
-                                        'gitlab-integration.host'
-                                    )
-                                    re = new RegExp("^[^@]+@#{host}")
-                                    if re.test(origin) and origin isnt @origin
-                                        @origin = origin
-                                        @gitlab.newOrigin(origin)
-                                    else if this.origin?
-                                        @origin = null
-                                        @gitlab.newOrigin(null)
-                                else if @origin?
-                                    @origin = null
-                                    @gitlab.newOrigin(null)
-                            )
-                        else if @origin?
-                            @origin = null
-                            @gitlab.newOrigin(null)
-                    )
-            else if @origin?
-                @origin = null
-                @gitlab.newOrigin(null)
+            console.log 'project change', currentProject
+            if currentProject isnt @currentProject
+                @statusBarView.onProjectChange(currentProject)
+                @currentProject = currentProject
+
+    handleRepository: (project, repos) =>
+        origin = repos.getOriginURL()
+        host = atom.config.get(
+            'gitlab-integration.host'
+        )
+        re = new RegExp("^[^@]+@gitlab.com:(?:(.*)\.git|(.*))$")
+        if re.test(origin)
+            projectName = re.exec(origin).filter((group) => group?)[1]
+            @gitlab.watch(projectName)
+            @projects[project] = projectName
+
+    handleProjects: (projects) =>
+        Promise.all(projects.map(
+            (project) =>
+                atom.project.repositoryForDirectory()
+        )).then((repositories) =>
+                console.log repositories
+                repositories.forEach(
+                    (repos) => @handleRepository(project, repos)
+                )
+        )
 
     activate: (state) ->
         @subscriptions = new CompositeDisposable
         @statusBarView = new StatusBarView
         @statusBarView.init()
+        @gitlab = new GitlabStatus @statusBarView
+        @projects = {}
         if not atom.config.get('gitlab-integration.token')
             atom.notifications.addInfo(
                 "You likely forgot to configure your gitlab token",
                 {dismissable: true}
             )
-        @subscriptions.add atom.config.onDidChange 'gitlab-integration.host',
-            => @updateRepository()
-        @subscriptions.add atom.config.onDidChange 'gitlab-integration.token', => @updateRepository()
-        @gitlab = new GitlabStatus @statusBarView
+        @subscriptions.add atom.config.onDidChange 'gitlab-integration.host', =>
+            @gitlab.deactivate()
+            @gitlab = new GitlabStatus @statusBarView
+            @handleProjects(atom.project.getDirectories())
+        @handleProjects(atom.project.getDirectories())
+        @subscriptions.add atom.project.onDidChangePaths @handleProjects
         atom.workspace.observeActivePaneItem (editor) =>
             if editor instanceof TextEditor
-                @updateRepository()
                 @subscriptions.add editor.onDidChangePath =>
-                    @updateRepository()
+                    @onPathChange()
 
     deactivate: ->
         @subscriptions.dispose()
