@@ -1,4 +1,4 @@
-# atom-gitlab package
+# Atom gitlab-integration package
 
 Track gitlab pipelines state of your project.
 
