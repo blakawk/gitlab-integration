@@ -35,30 +35,29 @@ module.exports = GitlabIntegration =
         if currentPane instanceof TextEditor
             currentPath = currentPane?.getPath?()
             [ currentProject, _ ] = atom.project.relativizePath(currentPath)
-            console.log 'project change', currentProject
+            console.log currentProject, @currentProject, @projects, @projects[currentProject], @projects[currentProject]?, currentProject isnt @currentProject
             if currentProject isnt @currentProject
-                @statusBarView.onProjectChange(currentProject)
+                console.log 'project change', @projects[currentProject]
+                @statusBarView.onProjectChange(@projects[currentProject])
                 @currentProject = currentProject
 
-    handleRepository: (project, repos) =>
+    handleRepository: (project, repos) ->
         origin = repos.getOriginURL()
         host = atom.config.get(
             'gitlab-integration.host'
         )
-        re = new RegExp("^[^@]+@gitlab.com:(?:(.*)\.git|(.*))$")
+        re = new RegExp("^[^@]+@#{host}:(?:(.*)\.git|(.*))$")
         if re.test(origin)
             projectName = re.exec(origin).filter((group) => group?)[1]
+            @projects[project.getPath()] = projectName
             @gitlab.watch(projectName)
-            @projects[project] = projectName
 
-    handleProjects: (projects) =>
-        Promise.all(projects.map(
+    handleProjects: (projects) ->
+        projects.map(
             (project) =>
-                atom.project.repositoryForDirectory()
-        )).then((repositories) =>
-                console.log repositories
-                repositories.forEach(
-                    (repos) => @handleRepository(project, repos)
+                atom.project.repositoryForDirectory(project).then(
+                    (repos) =>
+                        @handleRepository(project, repos)
                 )
         )
 
@@ -78,11 +77,12 @@ module.exports = GitlabIntegration =
             @gitlab = new GitlabStatus @statusBarView
             @handleProjects(atom.project.getDirectories())
         @handleProjects(atom.project.getDirectories())
-        @subscriptions.add atom.project.onDidChangePaths @handleProjects
+        @subscriptions.add atom.project.onDidChangePaths (paths) =>
+            @handleProjects(paths.map((path) => new Directory(path)))
         atom.workspace.observeActivePaneItem (editor) =>
             if editor instanceof TextEditor
-                @subscriptions.add editor.onDidChangePath =>
-                    @onPathChange()
+                @onPathChange()
+                @subscriptions.add editor.onDidChangePath @onPathChange
 
     deactivate: ->
         @subscriptions.dispose()

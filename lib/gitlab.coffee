@@ -1,8 +1,12 @@
 fetch = require('isomorphic-fetch')
 
 class GitlabStatus
-    constructor: (@view, @token=null, @timeout=null, @origin=null, @projects={}, @pending=[], @jobs={}) ->
-    fetch: (q) =>
+    constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
+        @host = atom.config.get('gitlab-integration.host')
+        @token = atom.config.get('gitlab-integration.token')
+        @period = atom.config.get('gitlab-integration.period')
+
+    fetch: (q) ->
         fetch(
             "https://#{@host}/api/v4/#{q}", {
                 headers: {
@@ -10,24 +14,9 @@ class GitlabStatus
                 }
             }
         ).then((res) => res.json())
-    newOrigin: (origin) =>
-        if origin isnt @origin
-            @token = atom.config.get('gitlab-integration.token')
-            @host = atom.config.get('gitlab-integration.host')
-            if @token isnt ''
-                if origin?
-                    @start(origin)
-                else
-                    @stop()
-            else
-                console.log "no token configured"
 
-    start: (@origin) =>
-        console.log "start", @origin
-        project = @origin.split(':')[1].split('/')[..1].join('/').replace(/\.git$/, '')
-        @addProject project
-
-    watch: (projectPath) =>
+    watch: (projectPath) ->
+        console.log "watch", projectPath
         if not @projects[projectPath]?
             @fetch("projects?membership=yes").then(
                 (projects) =>
@@ -35,38 +24,36 @@ class GitlabStatus
                         (project) =>
                             project.path_with_namespace is projectPath
                     )[0]
-                    console.log "added project", projectPath, @projects[projectPath]
                     @update()
             )
 
-    schedule: =>
-        @timeout = setTimeout @update, atom.config.get('gitlab-integration.period')
+    schedule: ->
+        @timeout = setTimeout @update.bind(@), @period
 
-    update: =>
-        console.log "update", Object.keys(@projects).join(", ")
+    update: ->
+        console.log "update"
         @pending = Object.keys(@projects).slice()
         @updatePipelines()
 
-    updatePipelines: =>
+    updatePipelines: ->
         Object.keys(@projects).forEach(
             (projectPath) =>
-                project = projects[projectPath]
+                project = @projects[projectPath]
                 if project?
+                    console.log "update pipelines", project
                     @fetch("projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             @updateJobs(project, pipelines[0])
                     )
         )
 
-    endUpdate: (project) =>
-        console.log "end of update", project
+    endUpdate: (project) ->
         @pending = @pending.filter((pending) => pending isnt project)
-        console.log "still pending", @pending.join()
         if @pending.length is 0
             @view.onStagesUpdate(@jobs)
             @schedule()
 
-    updateJobs: (project, pipeline) =>
+    updateJobs: (project, pipeline) ->
         @fetch("projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
             @onJobs(project, jobs.reverse().reduce(
@@ -85,7 +72,7 @@ class GitlabStatus
             , []))
         )
 
-    onJobs: (project, stages) =>
+    onJobs: (project, stages) ->
         @jobs[project.path_with_namespace] = stages.slice()
         @endUpdate(project.path_with_namespace)
 

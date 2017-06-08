@@ -20,14 +20,16 @@ class StatusBarView extends HTMLElement
         @displayed = true
 
     onProjectChange: (project) =>
+        console.log "stages", @stages, "project", project
+        @currentProject = project
         if @stages[project]?
-            @currentProject = project
-            @update(stages[project])
+            @update(@stages[project])
         else
             @hide()
 
     onStagesUpdate: (stages) =>
         @stages = stages
+        console.log "current", @currentProject, "stages", @stages
         if @stages[@currentProject]?
             @update(@stages[@currentProject])
 
@@ -49,11 +51,11 @@ class StatusBarView extends HTMLElement
                     e.style.color = 'red'
                 when stage.status is 'running'
                     console.log stage.name, 'running'
-                    e.classList.add('icon', 'icon-dashboard')
-                    e.style.color = 'blue'
-                when stage.status is 'pending'
-                    console.log stage.name, 'pending'
                     e.classList.add('icon', 'icon-clock')
+                    e.style.color = '#1f78d1'
+                when stage.status is 'pending' or stage.status is 'created'
+                    console.log stage.name, 'pending'
+                    e.classList.add('icon', 'icon-history')
                 when stage.status is 'skipped'
                     console.log stage.name, 'skipped'
                     e.classList.add('icon', 'icon-unverified')
@@ -61,7 +63,7 @@ class StatusBarView extends HTMLElement
         )
         if @children.length > 0
             console.log 'replace'
-            @replaceChild @children[0], status
+            @replaceChild status, @children[0]
         else
             console.log 'append'
             @appendChild status
