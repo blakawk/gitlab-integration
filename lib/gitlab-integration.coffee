@@ -35,13 +35,27 @@ module.exports = GitlabIntegration =
         if currentPane instanceof TextEditor
             currentPath = currentPane?.getPath?()
             [ currentProject, _ ] = atom.project.relativizePath(currentPath)
-            console.log currentProject, @currentProject, @projects, @projects[currentProject], @projects[currentProject]?, currentProject isnt @currentProject
             if currentProject isnt @currentProject
-                console.log 'project change', @projects[currentProject]
-                @statusBarView.onProjectChange(@projects[currentProject])
+                if @projects[currentProject]?
+                    if @projects[currentProject] isnt "<unknown>"
+                        @statusBarView.onProjectChange(@projects[currentProject])
+                    else
+                        @statusBarView.onProjectChange(null)
+                        @statusBarView.unknown(currentProject)
+                else
+                    if not currentProject?
+                        project = new File(currentPath).getParent()
+                        @currentProject = project.getPath()
+                        if not @projects[@currentProject]?
+                            atom.project.repositoryForDirectory(project)
+                                .then((repos) => @handleRepository(project, repos, true))
+                        else
+                            @statusBarView.onProjectChange(@projects[@currentProject])
+                    else
+                        @statusBarView.unknown(currentProject)
                 @currentProject = currentProject
 
-    handleRepository: (project, repos) ->
+    handleRepository: (project, repos, setCurrent) ->
         origin = repos.getOriginURL()
         host = atom.config.get(
             'gitlab-integration.host'
@@ -51,6 +65,10 @@ module.exports = GitlabIntegration =
             projectName = re.exec(origin).filter((group) => group?)[1]
             @projects[project.getPath()] = projectName
             @gitlab.watch(projectName)
+            if setCurrent?
+                @statusBarView.onProjectChange(projectName)
+        else
+            @projects[project.getPath()] = "<unknown>"
 
     handleProjects: (projects) ->
         projects.map(

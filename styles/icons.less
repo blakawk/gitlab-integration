@@ -1,0 +1,76 @@
+.gitlab-icon(@type) {
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    content: "";
+    font-size: 1.25em;
+    height: 1.5rem;
+    vertical-align: -4px;
+    background-image: url("atom://gitlab-integration/icons/@{type}.svg");
+    margin: 0;
+    padding: 0;
+}
+
+.gitlab-round {
+    border-radius: 100px;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.gitlab-created:before {
+    .gitlab-icon(created);
+    border-color: #c4c4c4;
+    fill: #c4c4c4;
+    .gitlab-round;
+}
+
+.gitlab-skipped:before {
+    .gitlab-icon(skipped);
+    border-color: #c4c4c4;
+    fill: #c4c4c4;
+    .gitlab-round;
+}
+
+.gitlab-running:before {
+    .gitlab-icon(running);
+    border-color: #418cd8;
+    fill: #418cd8;
+    .gitlab-round;
+}
+
+.gitlab-success:before {
+    .gitlab-icon(success);
+    border-color: #1aaa55;
+    fill: #1aaa55;
+    .gitlab-round;
+}
+
+.gitlab-failed:before {
+    .gitlab-icon(failed);
+    border-color: #db3b21;
+    fill: #db3b21;
+    .gitlab-round;
+}
+
+.gitlab-canceled:before {
+    .gitlab-icon(canceled);
+    border-color: #fff;
+    fill: #fff;
+    .gitlab-round;
+}
+
+.icon-gitlab:before {
+    .gitlab-icon(gitlab);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.icon-loading:before {
+    animation-name: spin;
+    animation-duration: 4000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
