@@ -16,22 +16,27 @@ class GitlabStatus
         ).then((res) => res.json())
 
     watch: (projectPath) ->
-        console.log "watch", projectPath
         if not @projects[projectPath]?
             @fetch("projects?membership=yes").then(
                 (projects) =>
-                    @projects[projectPath] = projects.filter(
-                        (project) =>
-                            project.path_with_namespace is projectPath
-                    )[0]
-                    @update()
+                    if projects?
+                        project = projects.filter(
+                            (project) =>
+                                project.path_with_namespace is projectPath
+                        )[0]
+                        if project?
+                            @projects[projectPath] = project
+                            @update()
+                        else
+                            @view.unknown(projectPath)
+                    else
+                        @view.unknown(projectPath)
             )
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
 
     update: ->
-        console.log "update"
         @pending = Object.keys(@projects).slice()
         @updatePipelines()
 
@@ -40,7 +45,8 @@ class GitlabStatus
             (projectPath) =>
                 project = @projects[projectPath]
                 if project?
-                    console.log "update pipelines", project
+                    if not @jobs[projectPath]?
+                        @view.loading(projectPath, "loading pipelines...")
                     @fetch("projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             @updateJobs(project, pipelines[0])
@@ -54,6 +60,8 @@ class GitlabStatus
             @schedule()
 
     updateJobs: (project, pipeline) ->
+        if not @jobs[project.path_with_namespace]?
+            @view.loading(project.path_with_namespace, "loading jobs...")
         @fetch("projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
             @onJobs(project, jobs.reverse().reduce(
@@ -77,10 +85,8 @@ class GitlabStatus
         @endUpdate(project.path_with_namespace)
 
     stop: ->
-        console.log "stop", @origin
         if @timeout?
             clearTimeout @timeout
-        [@timeout, @origin] = [null, null]
         @view.hide()
 
     deactivate: ->
