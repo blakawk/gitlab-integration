@@ -5,6 +5,7 @@ class GitlabStatus
         @host = atom.config.get('gitlab-integration.host')
         @token = atom.config.get('gitlab-integration.token')
         @period = atom.config.get('gitlab-integration.period')
+        @updating = {}
 
     fetch: (q) ->
         fetch(
@@ -16,7 +17,10 @@ class GitlabStatus
         ).then((res) => res.json())
 
     watch: (projectPath) ->
-        if not @projects[projectPath]?
+        if not @projects[projectPath]? and not @updating[projectPath]?
+            console.log "watching #{projectPath}"
+            @updating[projectPath] = false
+            @view.loading projectPath, "loading project..."
             @fetch("projects?membership=yes").then(
                 (projects) =>
                     if projects?
@@ -31,7 +35,7 @@ class GitlabStatus
                             @view.unknown(projectPath)
                     else
                         @view.unknown(projectPath)
-            )
+            ).catch(=> @watch(projectPath))
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
@@ -44,16 +48,20 @@ class GitlabStatus
         Object.keys(@projects).forEach(
             (projectPath) =>
                 project = @projects[projectPath]
-                if project?
+                if project? and project.id? and not @updating[projectPath]
+                    @updating[projectPath] = true
                     if not @jobs[projectPath]?
                         @view.loading(projectPath, "loading pipelines...")
+                    console.log "loading #{projectPath} pipelines"
                     @fetch("projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             @updateJobs(project, pipelines[0])
                     )
+                    .catch(=> @endUpdate(project))
         )
 
     endUpdate: (project) ->
+        @updating[project] = false
         @pending = @pending.filter((pending) => pending isnt project)
         if @pending.length is 0
             @view.onStagesUpdate(@jobs)
@@ -62,9 +70,10 @@ class GitlabStatus
     updateJobs: (project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
             @view.loading(project.path_with_namespace, "loading jobs...")
+        console.log "loading #{project.path_with_namespace} pipeline ##{pipeline.id} jobs"
         @fetch("projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
-            @onJobs(project, jobs.reverse().reduce(
+            @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
                 (stages, job) =>
                     stage = stages.find(
                         (stage) => stage.name is job.stage
@@ -73,12 +82,16 @@ class GitlabStatus
                         stage =
                             name: job.stage
                             status: 'success'
+                            jobs: []
                         stages = stages.concat([stage])
-                    if job.status isnt 'success'
-                        stage.status = job.status
+                    stage.jobs = stage.jobs.concat([job])
                     return stages
-            , []))
-        )
+            , []).map((stage) =>
+                Object.assign(stage, {
+                    status: stage.jobs.sort((a, b) => b.id - a.id)[0].status,
+                })
+            ))
+        ).catch(=> @endUpdate(project))
 
     onJobs: (project, stages) ->
         @jobs[project.path_with_namespace] = stages.slice()

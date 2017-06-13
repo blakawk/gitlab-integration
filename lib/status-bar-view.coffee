@@ -6,6 +6,7 @@ class StatusBarView extends HTMLElement
         @activate()
         @currentProject = null
         @stages = {}
+        @statuses = {}
         @disposables = new CompositeDisposable
         @statusDisposables = new CompositeDisposable
         @host = atom.config.get('gitlab-integration.host')
@@ -37,7 +38,7 @@ class StatusBarView extends HTMLElement
             if @stages[project]?
                 @update(project, @stages[project])
             else
-                @loading(project, "loading project...")
+                @loading(project, @statuses[project])
 
     onStagesUpdate: (stages) =>
         @stages = stages
@@ -45,6 +46,7 @@ class StatusBarView extends HTMLElement
             @update(@currentProject, @stages[@currentProject])
 
     loading: (project, message) =>
+        @statuses[project] = message
         if @currentProject is project
             status = document.createElement('div')
             status.classList.add('inline-block')
@@ -65,10 +67,18 @@ class StatusBarView extends HTMLElement
             @disposables.add @loadingTooltip
             status.appendChild icon
             status.appendChild span
-            if @children.length > 0
-                @replaceChild status, @children[0]
-            else
-                @appendChild status
+            @setchild(status)
+
+    setchild: (child) =>
+        if @children.length > 0
+            Array.from(@children[0].children).forEach((child) ->
+                tooltip = child.attributes["aria-describedby"]?.value
+                if tooltip?
+                    document.getElementById(tooltip)?.remove()
+            )
+            @replaceChild child, @children[0]
+        else
+            @appendChild child
 
     update: (project, stages) =>
         @show()
@@ -97,15 +107,14 @@ class StatusBarView extends HTMLElement
                     e.classList.add('icon', 'gitlab-created')
                 when stage.status is 'skipped'
                     e.classList.add('icon', 'gitlab-skipped')
+                when stage.status is 'canceled'
+                    e.classList.add('icon', 'gitlab-canceled')
             @statusDisposables.add atom.tooltips.add e, {
                 title: "#{stage.name}: #{stage.status}"
             }
             status.appendChild e
         )
-        if @children.length > 0
-            @replaceChild status, @children[0]
-        else
-            @appendChild status
+        @setchild(status)
 
     unknown: (project) =>
         @show()
@@ -123,10 +132,7 @@ class StatusBarView extends HTMLElement
             title: "no GitLab project detected in #{project}"
         })
         @disposables.add @unknownTooltip
-        if @children.length > 0
-            @replaceChild status, @children[0]
-        else
-            @appendChild status
+        @setchild(status)
 
 module.exports = document.registerElement 'status-bar-gitlab',
     prototype: StatusBarView.prototype, extends: 'div'
