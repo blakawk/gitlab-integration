@@ -3,7 +3,7 @@ path = require 'path'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
 
-module.exports = GitlabIntegration =
+class GitlabIntegration
     config:
         host:
             title: 'Gitlab API endpoint'
@@ -19,7 +19,7 @@ module.exports = GitlabIntegration =
             title: 'Polling period (ms)'
             description: 'The interval at which gitlab will be polled'
             minimum: 1000
-            default: 1000
+            default: 5000
             type: 'integer'
 
     consumeStatusBar: (statusBar) ->
@@ -38,7 +38,9 @@ module.exports = GitlabIntegration =
             if currentProject isnt @currentProject
                 if @projects[currentProject]?
                     if @projects[currentProject] isnt "<unknown>"
-                        @statusBarView.onProjectChange(@projects[currentProject])
+                        @statusBarView.onProjectChange(
+                            @projects[currentProject]
+                        )
                     else
                         @statusBarView.onProjectChange(null)
                         @statusBarView.unknown(currentProject)
@@ -48,11 +50,13 @@ module.exports = GitlabIntegration =
                         @currentProject = project.getPath()
                         if not @projects[@currentProject]?
                             atom.project.repositoryForDirectory(project)
-                                .then((repos) => @handleRepository(project, repos, true))
+                                .then((repos) =>
+                                    @handleRepository(project, repos, true)
+                                )
                         else
-                            @statusBarView.onProjectChange(@projects[@currentProject])
-                    else
-                        @statusBarView.unknown(currentProject)
+                            @statusBarView.onProjectChange(
+                                @projects[@currentProject]
+                            )
                 @currentProject = currentProject
 
     handleRepository: (project, repos, setCurrent) ->
@@ -71,12 +75,20 @@ module.exports = GitlabIntegration =
             @projects[project.getPath()] = "<unknown>"
 
     handleProjects: (projects) ->
-        projects.map(
-            (project) =>
-                atom.project.repositoryForDirectory(project).then(
-                    (repos) =>
-                        @handleRepository(project, repos)
-                )
+        Promise.all(
+            projects.map(
+                (project) =>
+                    atom.project.repositoryForDirectory(project).then(
+                        (repos) =>
+                            @handleRepository(project, repos)
+                            Promise.resolve()
+                    )
+            )
+        ).then(=>
+            if @projects[@currentProject] is "<unknown>"
+                @statusBarView.unknown(@currentProject)
+            else
+                @statusBarView.onProjectChange(@projects[@currentProject])
         )
 
     activate: (state) ->
@@ -107,3 +119,5 @@ module.exports = GitlabIntegration =
         @gitlab?.deactivate()
         @statusBarView?.deactivate()
         @statusBarTile?.destroy()
+
+module.exports = new GitlabIntegration

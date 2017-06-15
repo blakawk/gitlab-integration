@@ -18,7 +18,6 @@ class GitlabStatus
 
     watch: (projectPath) ->
         if not @projects[projectPath]? and not @updating[projectPath]?
-            console.log "watching #{projectPath}"
             @updating[projectPath] = false
             @view.loading projectPath, "loading project..."
             @fetch("projects?membership=yes").then(
@@ -35,7 +34,10 @@ class GitlabStatus
                             @view.unknown(projectPath)
                     else
                         @view.unknown(projectPath)
-            ).catch(=> @watch(projectPath))
+            ).catch(=>
+                @updating[projectPath] = undefined
+                setTimeout => @watch.bind(@)(projectPath) @timeout
+            )
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
@@ -52,12 +54,13 @@ class GitlabStatus
                     @updating[projectPath] = true
                     if not @jobs[projectPath]?
                         @view.loading(projectPath, "loading pipelines...")
-                    console.log "loading #{projectPath} pipelines"
                     @fetch("projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             @updateJobs(project, pipelines[0])
                     )
-                    .catch(=> @endUpdate(project))
+                    .catch(=>
+                        @endUpdate(project)
+                    )
         )
 
     endUpdate: (project) ->
@@ -70,7 +73,6 @@ class GitlabStatus
     updateJobs: (project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
             @view.loading(project.path_with_namespace, "loading jobs...")
-        console.log "loading #{project.path_with_namespace} pipeline ##{pipeline.id} jobs"
         @fetch("projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
             @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
@@ -91,7 +93,9 @@ class GitlabStatus
                     status: stage.jobs.sort((a, b) => b.id - a.id)[0].status,
                 })
             ))
-        ).catch(=> @endUpdate(project))
+        ).catch(=>
+            @endUpdate(project)
+        )
 
     onJobs: (project, stages) ->
         @jobs[project.path_with_namespace] = stages.slice()
