@@ -3,7 +3,7 @@ path = require 'path'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
 
-module.exports = GitlabIntegration =
+class GitlabIntegration
     config:
         host:
             title: 'Gitlab API endpoint'
@@ -19,7 +19,7 @@ module.exports = GitlabIntegration =
             title: 'Polling period (ms)'
             description: 'The interval at which gitlab will be polled'
             minimum: 1000
-            default: 1000
+            default: 5000
             type: 'integer'
 
     consumeStatusBar: (statusBar) ->
@@ -107,3 +107,5 @@ module.exports = GitlabIntegration =
         @gitlab?.deactivate()
         @statusBarView?.deactivate()
         @statusBarTile?.destroy()
+
+module.exports = new GitlabIntegration
