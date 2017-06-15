@@ -38,7 +38,9 @@ class GitlabIntegration
             if currentProject isnt @currentProject
                 if @projects[currentProject]?
                     if @projects[currentProject] isnt "<unknown>"
-                        @statusBarView.onProjectChange(@projects[currentProject])
+                        @statusBarView.onProjectChange(
+                            @projects[currentProject]
+                        )
                     else
                         @statusBarView.onProjectChange(null)
                         @statusBarView.unknown(currentProject)
@@ -48,11 +50,13 @@ class GitlabIntegration
                         @currentProject = project.getPath()
                         if not @projects[@currentProject]?
                             atom.project.repositoryForDirectory(project)
-                                .then((repos) => @handleRepository(project, repos, true))
+                                .then((repos) =>
+                                    @handleRepository(project, repos, true)
+                                )
                         else
-                            @statusBarView.onProjectChange(@projects[@currentProject])
-                    else
-                        @statusBarView.unknown(currentProject)
+                            @statusBarView.onProjectChange(
+                                @projects[@currentProject]
+                            )
                 @currentProject = currentProject
 
     handleRepository: (project, repos, setCurrent) ->
@@ -71,12 +75,20 @@ class GitlabIntegration
             @projects[project.getPath()] = "<unknown>"
 
     handleProjects: (projects) ->
-        projects.map(
-            (project) =>
-                atom.project.repositoryForDirectory(project).then(
-                    (repos) =>
-                        @handleRepository(project, repos)
-                )
+        Promise.all(
+            projects.map(
+                (project) =>
+                    atom.project.repositoryForDirectory(project).then(
+                        (repos) =>
+                            @handleRepository(project, repos)
+                            Promise.resolve()
+                    )
+            )
+        ).then(=>
+            if @projects[@currentProject] is "<unknown>"
+                @statusBarView.unknown(@currentProject)
+            else
+                @statusBarView.onProjectChange(@projects[@currentProject])
         )
 
     activate: (state) ->
