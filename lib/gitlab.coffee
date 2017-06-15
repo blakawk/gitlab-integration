@@ -34,7 +34,10 @@ class GitlabStatus
                             @view.unknown(projectPath)
                     else
                         @view.unknown(projectPath)
-            ).catch(=> @watch(projectPath))
+            ).catch(=>
+                @updating[projectPath] = undefined
+                setTimeout => @watch.bind(@)(projectPath) @timeout
+            )
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
