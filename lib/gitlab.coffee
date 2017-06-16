@@ -6,6 +6,7 @@ class GitlabStatus
         @token = atom.config.get('gitlab-integration.token')
         @period = atom.config.get('gitlab-integration.period')
         @updating = {}
+        @watchTimeout = null
 
     fetch: (q) ->
         fetch(
@@ -34,9 +35,10 @@ class GitlabStatus
                             @view.unknown(projectPath)
                     else
                         @view.unknown(projectPath)
-            ).catch(=>
+            ).catch((error) =>
                 @updating[projectPath] = undefined
-                setTimeout => @watch.bind(@)(projectPath) @timeout
+                console.error "cannot fetch projects: #{error.message}"
+                @watchTimeout = setTimeout (=> @watch(projectPath)), @period
             )
 
     schedule: ->
@@ -58,7 +60,8 @@ class GitlabStatus
                         (pipelines) =>
                             @updateJobs(project, pipelines[0])
                     )
-                    .catch(=>
+                    .catch((error) =>
+                        console.error "cannot fetch pipelines for project #{projectPath}: #{error.message}"
                         @endUpdate(project)
                     )
         )
@@ -93,7 +96,8 @@ class GitlabStatus
                     status: stage.jobs.sort((a, b) => b.id - a.id)[0].status,
                 })
             ))
-        ).catch(=>
+        ).catch((error) =>
+            console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}: #{error.message}"
             @endUpdate(project)
         )
 
@@ -104,6 +108,8 @@ class GitlabStatus
     stop: ->
         if @timeout?
             clearTimeout @timeout
+        if @watchTimeout?
+            clearTimeout @watchTimeout
         @view.hide()
 
     deactivate: ->
