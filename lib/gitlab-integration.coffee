@@ -34,7 +34,11 @@ class GitlabIntegration
         currentPane = atom.workspace.getActivePaneItem()
         if currentPane instanceof TextEditor
             currentPath = currentPane?.getPath?()
-            [ currentProject, _ ] = atom.project.relativizePath(currentPath)
+            if currentPath?
+                [ currentProject, _ ] =
+                    atom.project.relativizePath(currentPath)
+            else
+                currentProject = undefined
             if currentProject isnt @currentProject
                 if @projects[currentProject]?
                     if @projects[currentProject] isnt "<unknown>"
@@ -45,7 +49,7 @@ class GitlabIntegration
                         @statusBarView.onProjectChange(null)
                         @statusBarView.unknown(currentProject)
                 else
-                    if not currentProject?
+                    if not currentProject? and currentPath?
                         project = new File(currentPath).getParent()
                         @currentProject = project.getPath()
                         if not @projects[@currentProject]?
