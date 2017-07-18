@@ -64,7 +64,7 @@ class GitlabIntegration
         if origin?
             url = GitUrlParse(origin)
             if url?
-                projectName = url.pathname.slice(1).replace(/^.git$/, '')
+                projectName = url.pathname.slice(1).replace(/\.git$/, '')
                 @projects[project.getPath()] = projectName
                 @gitlab.watch(url.resource, projectName)
                 if setCurrent?
