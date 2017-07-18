@@ -2,26 +2,25 @@ fetch = require('isomorphic-fetch')
 
 class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
-        @host = atom.config.get('gitlab-integration.host')
         @token = atom.config.get('gitlab-integration.token')
         @period = atom.config.get('gitlab-integration.period')
         @updating = {}
         @watchTimeout = null
 
-    fetch: (q) ->
+    fetch: (host, q) ->
         fetch(
-            "https://#{@host}/api/v4/#{q}", {
+            "https://#{host}/api/v4/#{q}", {
                 headers: {
                     "PRIVATE-TOKEN": @token,
                 }
             }
         ).then((res) => res.json())
 
-    watch: (projectPath) ->
+    watch: (host, projectPath) ->
         if not @projects[projectPath]? and not @updating[projectPath]?
             @updating[projectPath] = false
             @view.loading projectPath, "loading project..."
-            @fetch("projects?membership=yes").then(
+            @fetch(host, "projects?membership=yes").then(
                 (projects) =>
                     if projects?
                         project = projects.filter(
@@ -29,7 +28,7 @@ class GitlabStatus
                                 project.path_with_namespace is projectPath
                         )[0]
                         if project?
-                            @projects[projectPath] = project
+                            @projects[projectPath] = { host, project }
                             @update()
                         else
                             @view.unknown(projectPath)
@@ -37,8 +36,8 @@ class GitlabStatus
                         @view.unknown(projectPath)
             ).catch((error) =>
                 @updating[projectPath] = undefined
-                console.error "cannot fetch projects: #{error.message}"
-                @watchTimeout = setTimeout (=> @watch(projectPath)), @period
+                console.error "cannot fetch projects from #{host}: #{error.message}"
+                @view.unknown(projectPath)
             )
 
     schedule: ->
@@ -51,14 +50,14 @@ class GitlabStatus
     updatePipelines: ->
         Object.keys(@projects).forEach(
             (projectPath) =>
-                project = @projects[projectPath]
+                { host, project } = @projects[projectPath]
                 if project? and project.id? and not @updating[projectPath]
                     @updating[projectPath] = true
                     if not @jobs[projectPath]?
                         @view.loading(projectPath, "loading pipelines...")
-                    @fetch("projects/#{project.id}/pipelines").then(
+                    @fetch(host, "projects/#{project.id}/pipelines").then(
                         (pipelines) =>
-                            @updateJobs(project, pipelines[0])
+                            @updateJobs(host, project, pipelines[0])
                     )
                     .catch((error) =>
                         console.error "cannot fetch pipelines for project #{projectPath}: #{error.message}"
@@ -73,10 +72,10 @@ class GitlabStatus
             @view.onStagesUpdate(@jobs)
             @schedule()
 
-    updateJobs: (project, pipeline) ->
+    updateJobs: (host, project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
             @view.loading(project.path_with_namespace, "loading jobs...")
-        @fetch("projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
+        @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
             @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
                 (stages, job) =>
