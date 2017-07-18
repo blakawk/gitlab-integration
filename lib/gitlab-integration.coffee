@@ -1,15 +1,11 @@
 {CompositeDisposable, File, Directory, TextEditor} = require 'atom'
 path = require 'path'
+GitUrlParse = require 'git-url-parse'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
 
 class GitlabIntegration
     config:
-        host:
-            title: 'Gitlab API endpoint'
-            description: 'Hostname of server where to access Gitlab API'
-            type: 'string'
-            default: 'gitlab.com'
         token:
             title: 'Gitlab API token'
             description: 'Token to access your Gitlab API'
@@ -65,16 +61,16 @@ class GitlabIntegration
 
     handleRepository: (project, repos, setCurrent) ->
         origin = repos.getOriginURL()
-        host = atom.config.get(
-            'gitlab-integration.host'
-        )
-        re = new RegExp("^[^@]+@#{host}:(?:(.*)\.git|(.*))$")
-        if re.test(origin)
-            projectName = re.exec(origin).filter((group) => group?)[1]
-            @projects[project.getPath()] = projectName
-            @gitlab.watch(projectName)
-            if setCurrent?
-                @statusBarView.onProjectChange(projectName)
+        if origin?
+            url = GitUrlParse(origin)
+            if url?
+                projectName = url.pathname.slice(1).replace(/^.git$/, '')
+                @projects[project.getPath()] = projectName
+                @gitlab.watch(url.resource, projectName)
+                if setCurrent?
+                    @statusBarView.onProjectChange(projectName)
+            else
+                @projects[project.getPath()] = "<unknown>"
         else
             @projects[project.getPath()] = "<unknown>"
 
@@ -106,10 +102,6 @@ class GitlabIntegration
                 "You likely forgot to configure your gitlab token",
                 {dismissable: true}
             )
-        @subscriptions.add atom.config.onDidChange 'gitlab-integration.host', =>
-            @gitlab.deactivate()
-            @gitlab = new GitlabStatus @statusBarView
-            @handleProjects(atom.project.getDirectories())
         @handleProjects(atom.project.getDirectories())
         @subscriptions.add atom.project.onDidChangePaths (paths) =>
             @handleProjects(paths.map((path) => new Directory(path)))

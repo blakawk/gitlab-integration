@@ -8,7 +8,6 @@ class StatusBarView extends HTMLElement
         @stages = {}
         @statuses = {}
         @tooltips = []
-        @host = atom.config.get('gitlab-integration.host')
 
     activate: => @displayed = false
     deactivate: =>
@@ -35,8 +34,10 @@ class StatusBarView extends HTMLElement
         if project?
             if @stages[project]?
                 @update(project, @stages[project])
-            else
+            else if @statuses[project]?
                 @loading(project, @statuses[project])
+            else
+                @unknown(project)
 
     onStagesUpdate: (stages) =>
         @stages = stages
@@ -57,7 +58,7 @@ class StatusBarView extends HTMLElement
             icon = document.createElement('span')
             icon.classList.add('icon', 'icon-gitlab')
             @tooltips.push atom.tooltips.add icon, {
-                title: "GitLab #{@host} project #{project}"
+                title: "GitLab project #{project}"
             }
             span = document.createElement('span')
             span.classList.add('icon', 'icon-sync', 'icon-loading')
@@ -82,7 +83,7 @@ class StatusBarView extends HTMLElement
         icon = document.createElement('span')
         icon.classList.add('icon', 'icon-gitlab')
         @tooltips.push atom.tooltips.add icon, {
-            title: "GitLab #{@host} project #{project}"
+            title: "GitLab project #{project}"
         }
         status.appendChild icon
         stages.forEach((stage) =>
@@ -108,18 +109,19 @@ class StatusBarView extends HTMLElement
         @setchild(status)
 
     unknown: (project) =>
-        @show()
-        @disposeTooltips()
-        host = atom.config.get('gitlab-integration.host')
-        status = document.createElement('div')
-        status.classList.add('inline-block')
-        span = document.createElement('span')
-        span.classList.add('icon', 'icon-question')
-        status.appendChild span
-        @tooltips.push atom.tooltips.add(span, {
-            title: "no GitLab project detected in #{project}"
-        })
-        @setchild(status)
+        @statuses[project] = undefined
+        if @currentProject is project
+            @show()
+            @disposeTooltips()
+            status = document.createElement('div')
+            status.classList.add('inline-block')
+            span = document.createElement('span')
+            span.classList.add('icon', 'icon-question')
+            status.appendChild span
+            @tooltips.push atom.tooltips.add(span, {
+                title: "no GitLab project detected in #{project}"
+            })
+            @setchild(status)
 
 module.exports = document.registerElement 'status-bar-gitlab',
     prototype: StatusBarView.prototype, extends: 'div'
