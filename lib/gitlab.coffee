@@ -1,4 +1,5 @@
-fetch = require('isomorphic-fetch')
+fetch = require 'isomorphic-fetch'
+log = require './log'
 
 class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
@@ -8,13 +9,17 @@ class GitlabStatus
         @watchTimeout = null
 
     fetch: (host, q) ->
+        log " -> fetch '#{q}' from '#{host}'"
         fetch(
             "https://#{host}/api/v4/#{q}", {
                 headers: {
                     "PRIVATE-TOKEN": @token,
                 }
             }
-        ).then((res) => res.json())
+        ).then((res) =>
+            log " <- ", res
+            res.json()
+        )
 
     watch: (host, projectPath) ->
         if not @projects[projectPath]? and not @updating[projectPath]?
@@ -36,7 +41,7 @@ class GitlabStatus
                         @view.unknown(projectPath)
             ).catch((error) =>
                 @updating[projectPath] = undefined
-                console.error "cannot fetch projects from #{host}: #{error.message}"
+                console.error "cannot fetch projects from #{host}", error
                 @view.unknown(projectPath)
             )
 
@@ -58,14 +63,14 @@ class GitlabStatus
                     @fetch(host, "projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             @updateJobs(host, project, pipelines[0])
-                    )
-                    .catch((error) =>
-                        console.error "cannot fetch pipelines for project #{projectPath}: #{error.message}"
+                    ).catch((error) =>
+                        console.error "cannot fetch pipelines for project #{projectPath}", error
                         @endUpdate(project)
                     )
         )
 
     endUpdate: (project) ->
+        log "project #{project} update end"
         @updating[project] = false
         @pending = @pending.filter((pending) => pending isnt project)
         if @pending.length is 0
@@ -96,7 +101,7 @@ class GitlabStatus
                 })
             ))
         ).catch((error) =>
-            console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}: #{error.message}"
+            console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
             @endUpdate(project)
         )
 

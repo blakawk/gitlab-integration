@@ -1,4 +1,5 @@
 {CompositeDisposable} = require('atom')
+log = require './log'
 
 class StatusBarView extends HTMLElement
     init: ->
@@ -30,6 +31,7 @@ class StatusBarView extends HTMLElement
         @displayed = true
 
     onProjectChange: (project) =>
+        log "current project becomes #{project}"
         @currentProject = project
         if project?
             if @stages[project]?
@@ -40,6 +42,7 @@ class StatusBarView extends HTMLElement
                 @unknown(project)
 
     onStagesUpdate: (stages) =>
+        log "new stages", stages
         @stages = stages
         if @stages[@currentProject]?
             @update(@currentProject, @stages[@currentProject])
@@ -49,6 +52,7 @@ class StatusBarView extends HTMLElement
         @tooltips = []
 
     loading: (project, message) =>
+        log "project #{project} loading with status '#{message}'"
         @statuses[project] = message
         if @currentProject is project
             @show()
@@ -76,6 +80,7 @@ class StatusBarView extends HTMLElement
             @appendChild child
 
     update: (project, stages) =>
+        log "updating stages of project #{project} with", stages
         @show()
         @disposeTooltips()
         status = document.createElement('div')
@@ -109,6 +114,7 @@ class StatusBarView extends HTMLElement
         @setchild(status)
 
     unknown: (project) =>
+        log "project #{project} is unknown"
         @statuses[project] = undefined
         if @currentProject is project
             @show()
