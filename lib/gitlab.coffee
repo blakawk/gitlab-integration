@@ -27,6 +27,7 @@ class GitlabStatus
             @view.loading projectPath, "loading project..."
             @fetch(host, "projects?membership=yes").then(
                 (projects) =>
+                    log "received projects from #{host}", projects
                     if projects?
                         project = projects.filter(
                             (project) =>
@@ -53,7 +54,7 @@ class GitlabStatus
         @updatePipelines()
 
     updatePipelines: ->
-        Object.keys(@projects).forEach(
+        Object.keys(@projects).map(
             (projectPath) =>
                 { host, project } = @projects[projectPath]
                 if project? and project.id? and not @updating[projectPath]
@@ -62,6 +63,7 @@ class GitlabStatus
                         @view.loading(projectPath, "loading pipelines...")
                     @fetch(host, "projects/#{project.id}/pipelines").then(
                         (pipelines) =>
+                            log "received pipelines from #{host}/#{project.id}", pipelines
                             @updateJobs(host, project, pipelines[0])
                     ).catch((error) =>
                         console.error "cannot fetch pipelines for project #{projectPath}", error
@@ -82,10 +84,11 @@ class GitlabStatus
             @view.loading(project.path_with_namespace, "loading jobs...")
         @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
+            log "received jobs from #{host}/#{project.id}/#{pipeline.id}", jobs
             @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
-                (stages, job) =>
+                (stages, job) ->
                     stage = stages.find(
-                        (stage) => stage.name is job.stage
+                        (stage) -> stage.name is job.stage
                     )
                     if not stage?
                         stage =
@@ -95,9 +98,19 @@ class GitlabStatus
                         stages = stages.concat([stage])
                     stage.jobs = stage.jobs.concat([job])
                     return stages
-            , []).map((stage) =>
+            , []).map((stage) ->
                 Object.assign(stage, {
-                    status: stage.jobs.sort((a, b) => b.id - a.id)[0].status,
+                    status: stage.jobs
+                        .sort((a, b) -> b.id - a.id)
+                        .reduce((status, job) ->
+                            switch
+                                when job.status is 'pending' then 'pending'
+                                when job.status is 'running' then 'running'
+                                when job.status is 'skipped' then 'skipped'
+                                when job.status is 'failure' and
+                                    status is 'success' then 'failure'
+                                else status
+                        , 'success')
                 })
             ))
         ).catch((error) =>
@@ -108,6 +121,7 @@ class GitlabStatus
     onJobs: (project, stages) ->
         @jobs[project.path_with_namespace] = stages.slice()
         @endUpdate(project.path_with_namespace)
+        Promise.resolve()
 
     stop: ->
         if @timeout?
