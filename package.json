@@ -23,5 +23,8 @@
   "dependencies": {
     "isomorphic-fetch": "^2.2.1",
     "git-url-parse": "^7.0.0"
+  },
+  "devDependencies": {
+    "nock": "^9.0.14"
   }
 }
