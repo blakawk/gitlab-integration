@@ -3,6 +3,7 @@ path = require 'path'
 GitUrlParse = require 'git-url-parse'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
+log = require './log'
 
 class GitlabIntegration
     config:
@@ -17,6 +18,10 @@ class GitlabIntegration
             minimum: 1000
             default: 5000
             type: 'integer'
+        debug:
+            title: 'Enable debug output in console'
+            type: 'boolean'
+            default: false
 
     consumeStatusBar: (statusBar) ->
         @statusBar = statusBar
@@ -60,11 +65,18 @@ class GitlabIntegration
                 @currentProject = currentProject
 
     handleRepository: (project, repos, setCurrent) ->
-        origin = repos.getOriginURL()
+        origin = repos?.getOriginURL()
+        log "--- handle repository"
+        log "     - project:", project
+        log "     - repos:", project
+        log "     - current:", setCurrent
         if origin?
+            log "     - origin:", origin
             url = GitUrlParse(origin)
+            log "     - url:", url
             if url?
                 projectName = url.pathname.slice(1).replace(/\.git$/, '')
+                log "     - name:", projectName
                 @projects[project.getPath()] = projectName
                 @gitlab.watch(url.resource, projectName)
                 if setCurrent?
