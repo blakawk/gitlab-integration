@@ -60,7 +60,7 @@ class GitlabIntegration
                 @currentProject = currentProject
 
     handleRepository: (project, repos, setCurrent) ->
-        origin = repos.getOriginURL()
+        origin = repos?.getOriginURL()
         if origin?
             url = GitUrlParse(origin)
             if url?
