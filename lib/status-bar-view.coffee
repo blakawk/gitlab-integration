@@ -91,26 +91,34 @@ class StatusBarView extends HTMLElement
             title: "GitLab project #{project}"
         }
         status.appendChild icon
-        stages.forEach((stage) =>
+        if stages.length is 0
             e = document.createElement('span')
-            switch
-                when stage.status is 'success'
-                    e.classList.add('icon', 'gitlab-success')
-                when stage.status is 'failed'
-                    e.classList.add('icon', 'gitlab-failed')
-                when stage.status is 'running'
-                    e.classList.add('icon', 'gitlab-running')
-                when stage.status is 'pending' or stage.status is 'created'
-                    e.classList.add('icon', 'gitlab-created')
-                when stage.status is 'skipped'
-                    e.classList.add('icon', 'gitlab-skipped')
-                when stage.status is 'canceled'
-                    e.classList.add('icon', 'gitlab-canceled')
+            e.classList.add('icon', 'icon-question')
             @tooltips.push atom.tooltips.add e, {
-                title: "#{stage.name}: #{stage.status}"
+                title: "no pipeline found"
             }
             status.appendChild e
-        )
+        else
+            stages.forEach((stage) =>
+                e = document.createElement('span')
+                switch
+                    when stage.status is 'success'
+                        e.classList.add('icon', 'gitlab-success')
+                    when stage.status is 'failed'
+                        e.classList.add('icon', 'gitlab-failed')
+                    when stage.status is 'running'
+                        e.classList.add('icon', 'gitlab-running')
+                    when stage.status is 'pending' or stage.status is 'created'
+                        e.classList.add('icon', 'gitlab-created')
+                    when stage.status is 'skipped'
+                        e.classList.add('icon', 'gitlab-skipped')
+                    when stage.status is 'canceled'
+                        e.classList.add('icon', 'gitlab-canceled')
+                @tooltips.push atom.tooltips.add e, {
+                    title: "#{stage.name}: #{stage.status}"
+                }
+                status.appendChild e
+            )
         @setchild(status)
 
     unknown: (project) =>

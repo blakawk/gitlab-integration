@@ -64,7 +64,10 @@ class GitlabStatus
                     @fetch(host, "projects/#{project.id}/pipelines").then(
                         (pipelines) =>
                             log "received pipelines from #{host}/#{project.id}", pipelines
-                            @updateJobs(host, project, pipelines[0])
+                            if pipelines.length > 0
+                                @updateJobs(host, project, pipelines[0])
+                            else
+                                @onJobs(project, [])
                     ).catch((error) =>
                         console.error "cannot fetch pipelines for project #{projectPath}", error
                         @endUpdate(project)

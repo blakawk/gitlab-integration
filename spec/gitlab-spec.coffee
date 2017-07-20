@@ -134,3 +134,31 @@ describe "GitLab API", ->
                     name: 'external-pipeline', status: 'success', jobs: []
                 }]}
             )
+
+    it "correctly handles project with no pipelines", ->
+        scope = nock('https://gitlab-api')
+            .get('/api/v4/projects/666/pipelines')
+            .reply(200, [])
+
+        gitlab.projects =
+            'dummy/project':
+                host: 'gitlab-api'
+                project: project
+
+        spyOn gitlab, 'updateJobs'
+
+        promise = Promise.all(gitlab.updatePipelines())
+        expect(gitlab.view.loading).toHaveBeenCalledWith(
+            project.path_with_namespace,
+            'loading pipelines...',
+        )
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(scope.isDone()).toBe(true)
+            expect(gitlab.updateJobs).not.toHaveBeenCalled()
+            expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith(
+                {'dummy/project': []},
+            )
