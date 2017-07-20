@@ -11,6 +11,10 @@ describe "GitLab API", ->
         pipeline,
         { id: 1, name: 'pipeline-1', status: 'success' },
     ]
+    externalPipeline =
+        id: 3
+        name: 'external-pipeline'
+        status: 'success'
     jobs = [
         { id: 1, name: 'job-1', stage: 'stage-1', status: 'success' },
         { id: 2, name: 'job-2', stage: 'stage-1', status: 'success' },
@@ -89,7 +93,7 @@ describe "GitLab API", ->
                 pipeline,
             )
 
-    it "handle jobs with stages", ->
+    it "handles jobs with stages", ->
         scope = nock('https://gitlab-api')
             .get('/api/v4/projects/666/pipelines/2/jobs')
             .reply(200, jobs)
@@ -108,4 +112,25 @@ describe "GitLab API", ->
             expect(scope.isDone()).toBe(true)
             expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith(
                 {'dummy/project': stages }
+            )
+
+    it "correctly handles external jobs", ->
+        scope = nock('https://gitlab-api')
+            .get('/api/v4/projects/666/pipelines/3/jobs')
+            .reply(200, [])
+
+        gitlab.jobs[project.path_with_namespace] = []
+
+        promise = gitlab.updateJobs('gitlab-api', project, externalPipeline)
+        expect(gitlab.view.loading).not.toHaveBeenCalled()
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(scope.isDone()).toBe(true)
+            expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith(
+                {'dummy/project': [{
+                    name: 'external-pipeline', status: 'success', jobs: []
+                }]}
             )

@@ -85,34 +85,41 @@ class GitlabStatus
         @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
         .then((jobs) =>
             log "received jobs from #{host}/#{project.id}/#{pipeline.id}", jobs
-            @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
-                (stages, job) ->
-                    stage = stages.find(
-                        (stage) -> stage.name is job.stage
-                    )
-                    if not stage?
-                        stage =
-                            name: job.stage
-                            status: 'success'
-                            jobs: []
-                        stages = stages.concat([stage])
-                    stage.jobs = stage.jobs.concat([job])
-                    return stages
-            , []).map((stage) ->
-                Object.assign(stage, {
-                    status: stage.jobs
-                        .sort((a, b) -> b.id - a.id)
-                        .reduce((status, job) ->
-                            switch
-                                when job.status is 'pending' then 'pending'
-                                when job.status is 'running' then 'running'
-                                when job.status is 'skipped' then 'skipped'
-                                when job.status is 'failure' and
-                                    status is 'success' then 'failure'
-                                else status
-                        , 'success')
-                })
-            ))
+            if jobs.length is 0
+                @onJobs(project, [
+                    name: pipeline.name
+                    status: pipeline.status
+                    jobs: []
+                ])
+            else
+                @onJobs(project, jobs.sort((a, b) -> a.id - b.id).reduce(
+                    (stages, job) ->
+                        stage = stages.find(
+                            (stage) -> stage.name is job.stage
+                        )
+                        if not stage?
+                            stage =
+                                name: job.stage
+                                status: 'success'
+                                jobs: []
+                            stages = stages.concat([stage])
+                        stage.jobs = stage.jobs.concat([job])
+                        return stages
+                , []).map((stage) ->
+                    Object.assign(stage, {
+                        status: stage.jobs
+                            .sort((a, b) -> b.id - a.id)
+                            .reduce((status, job) ->
+                                switch
+                                    when job.status is 'pending' then 'pending'
+                                    when job.status is 'running' then 'running'
+                                    when job.status is 'skipped' then 'skipped'
+                                    when job.status is 'failure' and
+                                        status is 'success' then 'failure'
+                                    else status
+                            , 'success')
+                    })
+                ))
         ).catch((error) =>
             console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
             @endUpdate(project)
