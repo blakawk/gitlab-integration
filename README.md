@@ -1,3 +1,8 @@
+
+[![Build Status](https://travis-ci.org/blakawk/gitlab-integration.svg?branch=master)](https://travis-ci.org/blakawk/gitlab-integration)
+[![APM Version](https://img.shields.io/apm/v/gitlab-integration.svg)](https://atom.io/packages/gitlab-integration)
+[![APM Downloads](https://img.shields.io/apm/dm/gitlab-integration.svg)](https://atom.io/packages/gitlab-integration)
+
 # Atom gitlab-integration package
 
 Track gitlab pipelines state of your project.
@@ -17,3 +22,7 @@ Track gitlab pipelines state of your project.
 
 # Contributing
 Reporting issues and pull requests are more than welcome on this project.
+
+Please provide console debug output screenshot by enabling corresponding option in package settings:
+
+![Debug option](https://user-images.githubusercontent.com/1149069/28597149-a58383c0-719c-11e7-8de8-879d417087cd.png)
