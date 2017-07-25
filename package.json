@@ -1,7 +1,7 @@
 {
   "name": "gitlab-integration",
   "main": "./lib/gitlab-integration",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "Track gitlab pipelines state of your project in Atom editor and more",
   "keywords": [
     "ui",
@@ -23,5 +23,8 @@
   "dependencies": {
     "isomorphic-fetch": "^2.2.1",
     "git-url-parse": "^7.0.0"
+  },
+  "devDependencies": {
+    "nock": "^9.0.14"
   }
 }
