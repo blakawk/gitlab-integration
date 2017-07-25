@@ -78,7 +78,11 @@ class GitlabIntegration
                 projectName = url.pathname.slice(1).replace(/\.git$/, '')
                 log "     - name:", projectName
                 @projects[project.getPath()] = projectName
-                @gitlab.watch(url.resource, projectName)
+                if url.port?
+                    host = "#{url.resource}:#{url.port}"
+                else
+                    host = url.resource
+                @gitlab.watch(host, projectName)
                 if setCurrent?
                     @statusBarView.onProjectChange(projectName)
             else
