@@ -40,7 +40,13 @@ class GitlabIntegration
                     atom.project.relativizePath(currentPath)
             else
                 currentProject = undefined
+            log "-- path change"
+            log "    - current:", @currentProject
+            log "    - new:", currentProject
+            log "    - projects:", @projects
+            log "    - current path:", currentPath
             if currentProject isnt @currentProject
+                log "     -> project changed to", @projects[currentProject]
                 if @projects[currentProject]?
                     if @projects[currentProject] isnt "<unknown>"
                         @statusBarView.onProjectChange(
@@ -52,15 +58,15 @@ class GitlabIntegration
                 else
                     if not currentProject? and currentPath?
                         project = new File(currentPath).getParent()
-                        @currentProject = project.getPath()
-                        if not @projects[@currentProject]?
+                        currentProject = project.getPath()
+                        if not @projects[currentProject]?
                             atom.project.repositoryForDirectory(project)
                                 .then((repos) =>
                                     @handleRepository(project, repos, true)
                                 )
                         else
                             @statusBarView.onProjectChange(
-                                @projects[@currentProject]
+                                @projects[currentProject]
                             )
                 @currentProject = currentProject
 
@@ -124,7 +130,8 @@ class GitlabIntegration
         atom.workspace.observeActivePaneItem (editor) =>
             if editor instanceof TextEditor
                 @onPathChange()
-                @subscriptions.add editor.onDidChangePath @onPathChange
+                @subscriptions.add editor.onDidChangePath =>
+                    @onPathChange
 
     deactivate: ->
         @subscriptions.dispose()
