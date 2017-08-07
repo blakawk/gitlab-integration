@@ -1,5 +1,13 @@
 # Change Log
 
+## [v0.4.0](https://github.com/blakawk/gitlab-integration/tree/v0.4.0) (2017-08-07)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.3.1...v0.4.0)
+
+**Implemented enhancements:**
+
+- Support gitlab paging API [\#11](https://github.com/blakawk/gitlab-integration/issues/11)
+
+
 ## [v0.3.1](https://github.com/blakawk/gitlab-integration/tree/v0.3.1) (2017-08-02)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.3.0...v0.3.1)
 

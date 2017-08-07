@@ -6,6 +6,9 @@ describe "GitLab API", ->
     project =
         id: 666
         path_with_namespace: 'dummy/project'
+    anotherProject =
+        id: 777
+        path_with_namespace: 'another/project'
     pipeline = { id: 2, name: 'pipeline-2', status: 'failure' }
     pipelines = [
         pipeline,
@@ -161,4 +164,38 @@ describe "GitLab API", ->
             expect(gitlab.updateJobs).not.toHaveBeenCalled()
             expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith(
                 {'dummy/project': []},
+            )
+
+    it "correctly handles paging", ->
+        scope = nock('https://gitlab-api')
+            .get('/api/v4/projects?membership=yes')
+            .reply(200, [ project ], {
+                'X-Total-Pages': 2,
+                'X-Next-Page': 2,
+                'X-Page': 1,
+                'X-Per-Page': 1,
+            })
+        scopePage2 = nock('https://gitlab-api')
+            .get('/api/v4/projects?membership=yes&per_page=1&page=2')
+            .reply(200, [ anotherProject ], {
+                'X-Page': 2,
+                'X-Per-Page': 1,
+                'X-Prev-Page': 1,
+            })
+
+        promise = gitlab.watch('gitlab-api', 'another/project')
+        expect(gitlab.view.loading).toHaveBeenCalledWith(
+            anotherProject.path_with_namespace,
+            'loading project...',
+        )
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(scope.isDone()).toBe(true)
+            expect(scopePage2.isDone()).toBe(true)
+            expect(gitlab.projects['another/project']).toEqual(
+                host: 'gitlab-api'
+                project: anotherProject
             )

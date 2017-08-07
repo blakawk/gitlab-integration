@@ -8,8 +8,8 @@ class GitlabStatus
         @updating = {}
         @watchTimeout = null
 
-    fetch: (host, q) ->
-        log " -> fetch '#{q}' from '#{host}'"
+    fetch: (host, q, paging=false) ->
+        log " -> fetch '#{q}' from '#{host}"
         fetch(
             "https://#{host}/api/v4/#{q}", {
                 headers: {
@@ -18,14 +18,53 @@ class GitlabStatus
             }
         ).then((res) =>
             log " <- ", res
-            res.json()
+            if res.headers.get('X-Next-Page')
+                if paging
+                    log " -> retrieving #{res.headers.get('X-Total-Pages')} pages"
+                    Promise.all(
+                        [res.json()].concat(
+                            new Array(
+                                parseInt(res.headers.get('X-Total-Pages')) - 1,
+                            ).fill(0).map(
+                                (dum, i) =>
+                                    log " -> page #{i + 2}"
+                                    fetch(
+                                        "https://#{host}/api/v4/#{q}" +
+                                        (if q.includes('?') then '&' else '?') +
+                                        "per_page=" + res.headers.get('X-Per-Page') +
+                                        "&page=#{i+2}", {
+                                            headers: {
+                                                'PRIVATE-TOKEN': @token
+                                            }
+                                        }
+                                    ).then((page) =>
+                                        log "     <- page #{i + 2}", page
+                                        page.json()
+                                    ).catch((error) =>
+                                        console.error "cannot fetch page #{i + 2}", error
+                                        Promise.resolve([])
+                                    )
+                            )
+                        )
+                    ).then((all) =>
+                        Promise.resolve(all.reduce(
+                            (all, one) =>
+                                all.concat(one)
+                            , [])
+                        )
+                    )
+                else
+                    log " -> ignoring paged output for #{q}"
+                    res.json()
+            else
+                res.json()
         )
 
     watch: (host, projectPath) ->
         if not @projects[projectPath]? and not @updating[projectPath]?
             @updating[projectPath] = false
             @view.loading projectPath, "loading project..."
-            @fetch(host, "projects?membership=yes").then(
+            @fetch(host, "projects?membership=yes", true).then(
                 (projects) =>
                     log "received projects from #{host}", projects
                     if projects?
@@ -85,7 +124,7 @@ class GitlabStatus
     updateJobs: (host, project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
             @view.loading(project.path_with_namespace, "loading jobs...")
-        @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs")
+        @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs", true)
         .then((jobs) =>
             log "received jobs from #{host}/#{project.id}/#{pipeline.id}", jobs
             if jobs.length is 0
