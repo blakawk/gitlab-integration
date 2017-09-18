@@ -77,7 +77,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com:1234', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project')
 
         repos =
             getOriginURL: -> 'http://some-url.com:1234/some/project.git'

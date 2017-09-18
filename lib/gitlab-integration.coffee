@@ -84,7 +84,10 @@ class GitlabIntegration
                 projectName = url.pathname.slice(1).replace(/\.git$/, '')
                 log "     - name:", projectName
                 @projects[project.getPath()] = projectName
-                if url.port?
+                sshProto = (
+                    url.protocols.length is 0 and url.protocol is "ssh"
+                ) or "ssh" in url.protocols
+                if url.port? and not sshProto
                     host = "#{url.resource}:#{url.port}"
                 else
                     host = url.resource
