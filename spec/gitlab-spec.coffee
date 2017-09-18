@@ -9,6 +9,9 @@ describe "GitLab API", ->
     anotherProject =
         id: 777
         path_with_namespace: 'another/project'
+    sensitiveProject =
+        id: 888
+        path_with_namespace: 'sEnsItIvE/prOjEct'
     pipeline = { id: 2, name: 'pipeline-2', status: 'failure' }
     pipelines = [
         pipeline,
@@ -65,6 +68,26 @@ describe "GitLab API", ->
             expect(gitlab.projects['dummy/project']).toEqual(
                 host: 'gitlab-api'
                 project: project
+            )
+
+    it "ignores case when looking for a project", ->
+        scope = nock('https://gitlab-api')
+            .get('/api/v4/projects?membership=yes')
+            .reply(200, [ sensitiveProject ])
+        promise = gitlab.watch('gitlab-api', 'sensitive/project')
+        expect(gitlab.view.loading).toHaveBeenCalledWith(
+            'sensitive/project',
+            'loading project...',
+        )
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(scope.isDone()).toBe(true)
+            expect(gitlab.projects['sensitive/project']).toEqual(
+                host: 'gitlab-api'
+                project: sensitiveProject
             )
 
     it "processes only the last pipeline", ->
