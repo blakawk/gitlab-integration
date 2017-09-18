@@ -81,7 +81,8 @@ class GitlabIntegration
             url = GitUrlParse(origin)
             log "     - url:", url
             if url?
-                projectName = url.pathname.slice(1).replace(/\.git$/, '')
+                projectName = url.pathname
+                    .slice(1).replace(/\.git$/, '').toLowerCase()
                 log "     - name:", projectName
                 @projects[project.getPath()] = projectName
                 sshProto = (
