@@ -61,6 +61,7 @@ class GitlabStatus
         )
 
     watch: (host, projectPath) ->
+        projectPath = projectPath.toLowerCase()
         if not @projects[projectPath]? and not @updating[projectPath]?
             @updating[projectPath] = false
             @view.loading projectPath, "loading project..."
@@ -70,7 +71,8 @@ class GitlabStatus
                     if projects?
                         project = projects.filter(
                             (project) =>
-                                project.path_with_namespace is projectPath
+                                project.path_with_namespace.toLowerCase() is
+                                    projectPath
                         )[0]
                         if project?
                             @projects[projectPath] = { host, project }

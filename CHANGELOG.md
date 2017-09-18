@@ -1,5 +1,14 @@
 # Change Log
 
+## [v0.4.1](https://github.com/blakawk/gitlab-integration/tree/v0.4.1) (2017-09-18)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.0...v0.4.1)
+
+**Implemented enhancements:**
+
+- don't add ssh port to host [\#13](https://github.com/blakawk/gitlab-integration/pull/13)
+- Origin URL is Case Sensitive [\#14](https://github.com/blakawk/gitlab-integration/issues/14)
+
+
 ## [v0.4.0](https://github.com/blakawk/gitlab-integration/tree/v0.4.0) (2017-08-07)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.3.1...v0.4.0)
 
