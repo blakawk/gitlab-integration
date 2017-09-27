@@ -158,8 +158,8 @@ class GitlabStatus
                                     when job.status is 'pending' then 'pending'
                                     when job.status is 'running' then 'running'
                                     when job.status is 'skipped' then 'skipped'
-                                    when job.status is 'failure' and
-                                        status is 'success' then 'failure'
+                                    when job.status is 'failed' and
+                                        status is 'success' then 'failed'
                                     else status
                             , 'success')
                     })
