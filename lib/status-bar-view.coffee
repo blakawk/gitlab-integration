@@ -116,6 +116,8 @@ class StatusBarView extends HTMLElement
                         e.classList.add('icon', 'gitlab-canceled')
                     when stage.status is 'created'
                         e.classList.add('icon', 'gitlab-created')
+                    when stage.status is 'manual'
+                        e.classList.add('icon', 'gitlab-manual')
                 @tooltips.push atom.tooltips.add e, {
                     title: "#{stage.name}: #{stage.status}"
                 }
