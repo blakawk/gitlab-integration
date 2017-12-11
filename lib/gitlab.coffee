@@ -156,6 +156,8 @@ class GitlabStatus
                             .reduce((status, job) ->
                                 switch
                                     when job.status is 'pending' then 'pending'
+                                    when job.status is 'created' then 'created'
+                                    when job.status is 'canceled' then 'canceled'
                                     when job.status is 'running' then 'running'
                                     when job.status is 'skipped' then 'skipped'
                                     when job.status is 'failed' and
