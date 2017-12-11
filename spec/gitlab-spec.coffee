@@ -68,6 +68,7 @@ describe "GitLab API", ->
             expect(gitlab.projects['dummy/project']).toEqual(
                 host: 'gitlab-api'
                 project: project
+                repos: undefined
             )
 
     it "ignores case when looking for a project", ->
@@ -88,6 +89,7 @@ describe "GitLab API", ->
             expect(gitlab.projects['sensitive/project']).toEqual(
                 host: 'gitlab-api'
                 project: sensitiveProject
+                repos: undefined
             )
 
     it "processes only the last pipeline", ->
@@ -221,4 +223,42 @@ describe "GitLab API", ->
             expect(gitlab.projects['another/project']).toEqual(
                 host: 'gitlab-api'
                 project: anotherProject
+                repos: undefined
+            )
+
+    it "correctly requests pipelines for current branch", ->
+        projectScope = nock('https://gitlab-api')
+            .get('/api/v4/projects?membership=yes')
+            .reply(200, [ project ])
+        scope = nock('https://gitlab-api')
+            .get('/api/v4/projects/666/pipelines?ref=abranch')
+            .reply(200, pipelines)
+
+        repos = jasmine.createSpyObj 'repos', [ 'getShortHead' ]
+        repos.getShortHead.andReturn('abranch')
+
+        promise = gitlab.watch('gitlab-api', 'dummy/project', repos).then(
+            (updateJobs) -> Promise.all(updateJobs)
+        )
+
+        expect(gitlab.view.loading).toHaveBeenCalledWith(
+            project.path_with_namespace,
+            'loading project...',
+        )
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(projectScope.isDone()).toBe(true)
+            expect(gitlab.view.loading).toHaveBeenCalledWith(
+                project.path_with_namespace,
+                'loading pipelines...',
+            )
+            expect(scope.isDone()).toBe(true)
+            expect(repos.getShortHead).toHaveBeenCalled()
+            expect(gitlab.projects['dummy/project']).toEqual(
+                host: 'gitlab-api'
+                project: project
+                repos: repos
             )

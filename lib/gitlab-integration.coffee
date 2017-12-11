@@ -74,7 +74,7 @@ class GitlabIntegration
         origin = repos?.getOriginURL()
         log "--- handle repository"
         log "     - project:", project
-        log "     - repos:", project
+        log "     - repos:", repos
         log "     - current:", setCurrent
         if origin?
             log "     - origin:", origin
@@ -92,7 +92,7 @@ class GitlabIntegration
                     host = "#{url.resource}:#{url.port}"
                 else
                     host = url.resource
-                @gitlab.watch(host, projectName)
+                @gitlab.watch(host, projectName, repos)
                 if setCurrent?
                     @statusBarView.onProjectChange(projectName)
             else
