@@ -25,7 +25,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
         repos =
             getOriginURL: -> 'git@some-url.com:some/project.git'
@@ -35,7 +35,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
     it 'correctly handles HTTP URL', ->
         repos =
@@ -46,7 +46,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
         repos =
             getOriginURL: -> 'https://some-url.com/some/project.git'
@@ -56,7 +56,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
         repos =
             getOriginURL: -> 'https://test@some-url.com/some/project.git'
@@ -66,7 +66,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
     it 'correctly handles non-standard port', ->
         repos =
@@ -77,7 +77,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'some/project')
+            .toHaveBeenCalledWith('some-url.com', 'some/project', repos)
 
         repos =
             getOriginURL: -> 'http://some-url.com:1234/some/project.git'
@@ -87,7 +87,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com:1234', 'some/project')
+            .toHaveBeenCalledWith('some-url.com:1234', 'some/project', repos)
 
         repos =
             getOriginURL: -> 'https://test@some-url.com:1234/some/project.git'
@@ -97,7 +97,7 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('some/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com:1234', 'some/project')
+            .toHaveBeenCalledWith('some-url.com:1234', 'some/project', repos)
 
     it 'correctly ignores case for projects name', ->
         repos =
@@ -108,4 +108,4 @@ describe 'GitLab Integration', ->
         expect(integration.projects['/some/project'])
             .toBe('sensitive/project')
         expect(integration.gitlab.watch)
-            .toHaveBeenCalledWith('some-url.com', 'sensitive/project')
+            .toHaveBeenCalledWith('some-url.com', 'sensitive/project', repos)

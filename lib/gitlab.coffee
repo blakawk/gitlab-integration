@@ -60,7 +60,7 @@ class GitlabStatus
                 res.json()
         )
 
-    watch: (host, projectPath) ->
+    watch: (host, projectPath, repos) ->
         projectPath = projectPath.toLowerCase()
         if not @projects[projectPath]? and not @updating[projectPath]?
             @updating[projectPath] = false
@@ -75,7 +75,7 @@ class GitlabStatus
                                     projectPath
                         )[0]
                         if project?
-                            @projects[projectPath] = { host, project }
+                            @projects[projectPath] = { host, project, repos }
                             @update()
                         else
                             @view.unknown(projectPath)
@@ -97,12 +97,18 @@ class GitlabStatus
     updatePipelines: ->
         Object.keys(@projects).map(
             (projectPath) =>
-                { host, project } = @projects[projectPath]
+                { host, project, repos } = @projects[projectPath]
                 if project? and project.id? and not @updating[projectPath]
                     @updating[projectPath] = true
+                    ref = repos?.getShortHead?()
+                    if ref?
+                        log "project #{project} ref is #{ref}"
+                        ref = "?ref=#{ref}"
+                    else
+                        ref = ""
                     if not @jobs[projectPath]?
                         @view.loading(projectPath, "loading pipelines...")
-                    @fetch(host, "projects/#{project.id}/pipelines").then(
+                    @fetch(host, "projects/#{project.id}/pipelines#{ref}").then(
                         (pipelines) =>
                             log "received pipelines from #{host}/#{project.id}", pipelines
                             if pipelines.length > 0
@@ -122,6 +128,7 @@ class GitlabStatus
         if @pending.length is 0
             @view.onStagesUpdate(@jobs)
             @schedule()
+        @jobs[project.path_with_namespace]
 
     updateJobs: (host, project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
@@ -174,7 +181,7 @@ class GitlabStatus
     onJobs: (project, stages) ->
         @jobs[project.path_with_namespace] = stages.slice()
         @endUpdate(project.path_with_namespace)
-        Promise.resolve()
+        Promise.resolve(stages)
 
     stop: ->
         if @timeout?
