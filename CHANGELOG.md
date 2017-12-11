@@ -1,5 +1,14 @@
 # Change Log
 
+## [v0.4.3](https://github.com/blakawk/gitlab-integration/tree/v0.4.3) (2017-12-11)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.2...v0.4.3)
+
+**Closed issues:**
+
+- branch support [\#20](https://github.com/blakawk/gitlab-integration/issues/20)
+- fix(status): icon for 'created' job [\#21](https://github.com/blakawk/gitlab-integration/pull/21)
+
+
 ## [v0.4.2](https://github.com/blakawk/gitlab-integration/tree/v0.4.2) (2017-09-27)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.1...v0.4.2)
 
