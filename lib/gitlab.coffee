@@ -1,22 +1,19 @@
 fetch = require 'isomorphic-fetch'
 log = require './log'
+shell = require('electron').shell;
+JobSelectorView = require './job-selector-view'
 
 class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
         @token = atom.config.get('gitlab-integration.token')
+        @artifactReportPath = atom.config.get('gitlab-integration.artifactReportPath')
         @period = atom.config.get('gitlab-integration.period')
         @updating = {}
         @watchTimeout = null
+        @view.setController(@)
 
     fetch: (host, q, paging=false) ->
-        log " -> fetch '#{q}' from '#{host}"
-        fetch(
-            "https://#{host}/api/v4/#{q}", {
-                headers: {
-                    "PRIVATE-TOKEN": @token,
-                }
-            }
-        ).then((res) =>
+        @load(host,q).then((res) =>
             log " <- ", res
             if res.headers.get('X-Next-Page')
                 if paging
@@ -60,6 +57,16 @@ class GitlabStatus
                 res.json()
         )
 
+    load: (host, q) ->
+        log " -> fetch '#{q}' from '#{host}"
+        fetch(
+            "https://#{host}/api/v4/#{q}", {
+                headers: {
+                    "PRIVATE-TOKEN": @token,
+                }
+            }
+        )
+
     watch: (host, projectPath, repos) ->
         projectPath = projectPath.toLowerCase()
         if not @projects[projectPath]? and not @updating[projectPath]?
@@ -86,6 +93,129 @@ class GitlabStatus
                 console.error "cannot fetch projects from #{host}", error
                 @view.unknown(projectPath)
             )
+
+    printHeader: (job) ->
+      "[0K[32;1m Log from branch #{job.ref} | job  #{job.name} | #  #{job.id} | pipeline  #{job.pipeline.id} [0;m"
+
+    loadJob: (host, project, job) ->
+      atom.notifications.addInfo(
+          "Downloading build log for job #{job.name} #{job.id}",
+          {dismissable: true}
+      )
+      @load(host, "projects/#{project.id}/jobs/#{job.id}/trace", false)
+        .then(  (res) ->
+          return res.text()
+        )
+        .then( (text) ->
+          return text: text, job: job
+        )
+        .catch((error) ->
+            atom.notifications.addWarning(
+                "Unable to load the build log due to #{error}",
+                {dismissable: true}
+            )
+            console.error "cannot fetch the build log from projects/#{project.id}/jobs/#{job.id}/trace", error
+        )
+
+    openLog: (projectPath, job) ->
+      { host, project, repos } = @projects[projectPath]
+      @loadJob(host, project, job)
+      .then(  (downloadedLog) =>
+            atom.workspace.open(undefined, {
+              # split : 'right'
+              }).then (editor) =>
+                # editor.setFileName("#{job.name}.#{job.ref}.#{job.id}")
+                editor.setGrammar(atom.grammars.grammarForScopeName('text.ansi'))
+                editor.insertText @printHeader downloadedLog.job
+                editor.insertNewline()
+                editor.insertNewline()
+                editor.insertText(downloadedLog.text)
+      )
+      .catch((error) ->
+          console.error "cannot open editor for the build log of #{projectPath} and job #{job.id}", error
+      )
+
+    openFailedLogs: (projectPath, jobs) ->
+        @openLogs(projectPath, jobs.filter (job) -> job.status is 'failed')
+
+    openFailedLogsInGroup: (projectPath, jobs, mainJob) ->
+        @openFailedLogs(projectPath, jobs.filter (job) -> job.name is mainJob.name)
+
+    openLogs: (projectPath, jobs) ->
+      { host, project, repos } = @projects[projectPath]
+
+      atom.notifications.addInfo(
+          "Downloading build logs for #{jobs.length} jobs",
+          {dismissable: true}
+      )
+
+      jobsToLoad = (
+         @loadJob(host, project, aJob) for aJob in jobs
+      )
+
+      Promise.all(jobsToLoad)
+      .then (logs) =>
+        logs?.sort (a, b) ->
+            return -1 if a.job.name < b.job.name
+            return 1 if a.job.name > b.job.name
+
+            return -1 if a.job.id < b.job.id
+            return 1 if a.job.id > b.job.id
+            return 0
+
+        atom.workspace.open(undefined, {
+          # split : 'right'
+          }).then (editor) =>
+            # editor.setFileName("#{job.name}.#{job.ref}.#{job.id}")
+            editor.setGrammar(atom.grammars.grammarForScopeName('text.ansi'))
+            for l in logs
+              editor.insertNewline()
+              editor.insertText @printHeader l.job
+              editor.insertNewline()
+              editor.insertText(l.text)
+              # atom.notifications.addInfo(
+              #     "Build log #{l.job.name} (#{l.job.id}) downloaded",
+              #     {dismissable: true}
+              # )
+        .catch((error) ->
+            console.error "cannot open editor for build logs of jobs of #{projectPath}", error
+        )
+
+    openReport: (projectPath, job) ->
+      if not job.artifacts_file
+        atom.notifications.addWarning(
+          "No artifacts for job #{job.name}",
+          {dismissable: true}
+        )
+        return
+
+      path = @artifactReportPath.split('<JOB_NAME>').join(job.name)
+
+      if not path
+        atom.notifications.addWarning(
+          "Unknown path for artifact to download for #{job.name}",
+          {dismissable: true}
+        )
+        return
+
+      { host, project, repos } = @projects[projectPath]
+      shell.openExternal("https://#{host}/#{encodeURI(projectPath)}/-/jobs/#{job.id}/artifacts/raw/#{path}");
+
+    openGitlabCICD: (projectPath) ->
+      { host, project, repos } = @projects[projectPath]
+      return unless host
+      shell.openExternal("https://#{host}/#{projectPath}/pipelines");
+
+    openPipeline: (projectPath, stages) ->
+      if stages
+        { host, project, repos } = @projects[projectPath]
+        shell.openExternal("https://#{host}/#{projectPath}/pipelines/#{stages[0].pipeline}");
+      else
+        @openGitlabCICD(projectPath)
+
+    openJobSelector: (projectPath, stage) ->
+      selector = new JobSelectorView
+      selector.initialize(stage.jobs, @ , projectPath)
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
@@ -151,26 +281,27 @@ class GitlabStatus
                         if not stage?
                             stage =
                                 name: job.stage
-                                status: 'success'
+                                pipeline: pipeline.id
+                                status: 'created'
                                 jobs: []
                             stages = stages.concat([stage])
                         stage.jobs = stage.jobs.concat([job])
                         return stages
                 , []).map((stage) ->
                     Object.assign(stage, {
+                        firstFailedJob: stage.jobs
+                            .filter( (job) ->  job.status is 'failed' )?[0]
+
                         status: stage.jobs
                             .sort((a, b) -> b.id - a.id)
                             .reduce((status, job) ->
-                                switch
-                                    when job.status is 'pending' then 'pending'
-                                    when job.status is 'created' then 'created'
-                                    when job.status is 'canceled' then 'canceled'
-                                    when job.status is 'running' then 'running'
-                                    when job.status is 'skipped' then 'skipped'
-                                    when job.status is 'failed' and
-                                        status is 'success' then 'failed'
-                                    else status
-                            , 'success')
+                                switch status
+                                    when 'failed' then 'failed'
+                                    when 'pending' then 'pending'
+                                    when 'manual' then 'manual'
+                                    when 'running' then 'running'
+                                    else job.status
+                            , 'created')
                     })
                 ))
         ).catch((error) =>

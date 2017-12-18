@@ -9,6 +9,10 @@ class StatusBarView extends HTMLElement
         @stages = {}
         @statuses = {}
         @tooltips = []
+        @controller = null
+
+    setController: (controller) =>
+      @controller = controller
 
     activate: => @displayed = false
     deactivate: =>
@@ -59,8 +63,10 @@ class StatusBarView extends HTMLElement
             @disposeTooltips()
             status = document.createElement('div')
             status.classList.add('inline-block')
-            icon = document.createElement('span')
+            icon = document.createElement('a')
             icon.classList.add('icon', 'icon-gitlab')
+            icon.onclick =  (e) =>
+                @controller.openGitlabCICD(project);
             @tooltips.push atom.tooltips.add icon, {
                 title: "GitLab project #{project}"
             }
@@ -85,10 +91,12 @@ class StatusBarView extends HTMLElement
         @disposeTooltips()
         status = document.createElement('div')
         status.classList.add('inline-block')
-        icon = document.createElement('span')
+        icon = document.createElement('a')
         icon.classList.add('icon', 'icon-gitlab')
+        icon.onclick =  (e) =>
+            @controller.openGitlabCICD(project);
         @tooltips.push atom.tooltips.add icon, {
-            title: "GitLab project #{project}"
+            title: "GitLab project #{project} #{stages[0]?.pipeline} on branch #{stages[0]?.jobs[0]?.ref}"
         }
         status.appendChild icon
         if stages.length is 0
@@ -99,29 +107,29 @@ class StatusBarView extends HTMLElement
             }
             status.appendChild e
         else
+            icon.onclick =  (e) =>
+                @controller.openPipeline(project, stages);
+
             stages.forEach((stage) =>
-                e = document.createElement('span')
-                switch
-                    when stage.status is 'success'
-                        e.classList.add('icon', 'gitlab-success')
-                    when stage.status is 'failed'
-                        e.classList.add('icon', 'gitlab-failed')
-                    when stage.status is 'running'
-                        e.classList.add('icon', 'gitlab-running')
-                    when stage.status is 'pending'
-                        e.classList.add('icon', 'gitlab-pending')
-                    when stage.status is 'skipped'
-                        e.classList.add('icon', 'gitlab-skipped')
-                    when stage.status is 'canceled'
-                        e.classList.add('icon', 'gitlab-canceled')
-                    when stage.status is 'created'
-                        e.classList.add('icon', 'gitlab-created')
-                    when stage.status is 'manual'
-                        e.classList.add('icon', 'gitlab-manual')
+                failedJobs =  stage.jobs.filter( (job) ->  job.status is 'failed' )
+
+                e = document.createElement('a')
+                e.classList.add('icon', "gitlab-#{stage.status}")
+                e.onclick =  (e) =>
+                  @controller.openJobSelector(project, stage);
                 @tooltips.push atom.tooltips.add e, {
-                    title: "#{stage.name}: #{stage.status}"
+                    title: "#{stage.name}: #{stage.status} | #{failedJobs.length} failed jobs out of #{stage.jobs.length} | Click to individually select a job's log to download."
                 }
                 status.appendChild e
+                if failedJobs.length > 0
+                  e = document.createElement('a')
+                  e.classList.add('icon', "gitlab-artifact")
+                  e.onclick =  (e) =>
+                      @controller.openFailedLogs(project, stage.jobs);
+                  @tooltips.push atom.tooltips.add e, {
+                      title: "Download all failed logs (#{failedJobs.length}) from the stage #{stage.name}"
+                  }
+                  status.appendChild e
             )
         @setchild(status)
 
