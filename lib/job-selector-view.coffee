@@ -56,7 +56,7 @@ class JobSelectorView extends SelectListView
 
   viewForItem: (job) ->
     artifactIcon = if job.artifacts_file then "| <span class='icon gitlab-artifact'/>" else ""
-    "<li> <span class='icon gitlab-#{job.status}'/> <strong>#{job.name}</strong> (#{job.id}) | ♨︎ #{Math.round(job.duration)}s #{artifactIcon} | <span class='icon icon-clock'/> #{job.finished_at}  | <small>#{job.runner.description}</small> | <img src='#{job.user.avatar_url}' class='gitlab-avatar'/> #{job.user.name} </li>"
+    "<li> <span class='icon gitlab-#{job.status}'/> <strong>#{job.name}</strong> (#{job.id}) | ♨︎ #{Math.round(job.duration)}s #{artifactIcon} | <span class='icon icon-clock'/> #{job.finished_at} | <small>#{job.runner?.description}</small> | <img src='#{job.user?.avatar_url}' class='gitlab-avatar'/> #{job.user?.name} </li>"
 
   confirmed: (job) =>
     @cancel()
