@@ -10,6 +10,11 @@ Track gitlab pipelines state of your project.
 ![Screenshot](https://user-images.githubusercontent.com/1149069/28337289-7973ebcc-6c05-11e7-844d-c7a1e106317c.png)
 
 # Configuration
+ - This fork can be installed from
+   ```
+     apm install https://github.com/azachar/gitlab-integration
+   ```
+  Please install additional forks to benefit from some extra functionality.
 
  - Once installed, fill your Gitlab API token in the package's settings page
    - If you don't know what they are, please refer to https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html,
@@ -20,6 +25,16 @@ Track gitlab pipelines state of your project.
  - Add the project to Atom or directly open a file from your project
  - `gitlab-integration` should display pipeline statuses in the status bar if it can correctly determine and reach the gitlab server where your project is hosted like shown above.
  - *In case any errors occurs, a message should be logged in Atom developer console.*
+
+## Gitlab Build Log Filtering Support
+- In order to benefit from extra log filtering to narrow down your error from your failed GitLab job's trace log, you need to install 2 additional packages to your atom. Currently, these packages are in experimental mode and still under the development (basically I forked them to gain quick functionality)
+- Please install forks `language-ansi-styles` from `azachar` repo the same applies to `language-log` package.
+  ```
+    apm install https://github.com/azachar/language-log
+    apm install https://github.com/azachar/language-ansi-styles
+  ```
+
+- In order to open your job's reports directly in your browser instead of downloading them, please set up your GitLab installation or modify your browser by following https://gitlab.com/gitlab-org/gitlab-ce/issues/10982#note_50291868
 
 # Contributing
 Reporting issues and pull requests are more than welcome on this project.
