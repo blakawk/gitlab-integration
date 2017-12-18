@@ -151,6 +151,10 @@ class GitlabIntegration
               if @statusBarView.currentProject and failedStages?.length > 0
                     @gitlab.openJobSelector(@statusBarView.currentProject, failedStages[0])
 
+        atom.commands.add 'atom-workspace',
+          'gitlab-integration:reload': () =>
+              @handleProjects(atom.project.getDirectories())
+
         @handleProjects(atom.project.getDirectories())
         @subscriptions.add atom.project.onDidChangePaths (paths) =>
             @handleProjects(paths.map((path) => new Directory(path)))
