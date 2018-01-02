@@ -67,12 +67,16 @@ class GitlabStatus
             @view.loading projectPath, "loading project..."
             @fetch(host, "projects?membership=yes", true).then(
                 (projects) =>
+                    projects = projects.map(
+                        (project) =>
+                            project.path_with_namespace = project.path_with_namespace.toLowerCase()
+                            project
+                    )
                     log "received projects from #{host}", projects
                     if projects?
                         project = projects.filter(
                             (project) =>
-                                project.path_with_namespace.toLowerCase() is
-                                    projectPath
+                                project.path_with_namespace is projectPath
                         )[0]
                         if project?
                             @projects[projectPath] = { host, project, repos }
