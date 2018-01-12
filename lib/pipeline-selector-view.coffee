@@ -1,6 +1,4 @@
 {$, $$, SelectListView} = require 'atom-space-pen-views'
-moment = require 'moment'
-moment.locale('sk')
 
 Array::unique = ->
   output = {}
