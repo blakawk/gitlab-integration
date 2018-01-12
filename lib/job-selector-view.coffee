@@ -1,6 +1,23 @@
 {$, $$, SelectListView} = require 'atom-space-pen-views'
-
+moment = require 'moment'
+# moment.locale('sk')
 class JobSelectorView extends SelectListView
+  toHHMMSS: (sec_num) ->
+    sec_num = Math.round(sec_num)
+    hours = Math.floor(sec_num / 3600)
+    minutes = Math.floor((sec_num - (hours * 3600)) / 60)
+    seconds = sec_num - (hours * 3600) - (minutes * 60)
+    if hours < 10
+      hours = "0"+hours
+    if minutes < 10
+      minutes = "0"+minutes
+    if seconds < 10
+      seconds = "0"+seconds
+    if hours is "00"
+      "#{minutes}m #{seconds}s"
+    else
+      "#{hours}h #{minutes}m #{seconds}s"
+
   initialize: (jobs, controller, projectPath) ->
     super
 
@@ -21,42 +38,36 @@ class JobSelectorView extends SelectListView
     @panel.show()
     @focusFilterEditor()
     @getFilterKey = -> 'name'
-    # @loadingArea.append $$ @extraContent
+    @loadingArea.append $$ @extraContent
     @handleEvents
     # @loadingArea.show()
 
   extraContent: ->
-    @div class: 'input-block-item', =>
-      @div class: 'btn-group', =>
-        @button outlet: 'sortButton', class: 'btn', 'Sort'
-      @div class: 'btn-group', =>
-        @button outlet: 'allButton', class: 'btn', 'All'
-      @div class: 'btn-group', =>
-        @button outlet: 'selectedButton', class: 'btn', 'Selected'
+    @div class: 'block', =>
+      @div class: 'input-block-item', =>
+        @button outlet: 'totalButton', class: 'btn btn-info', 'Total failures'
 
 
-  handleEvents: ->
-    @sortButton.on 'click', => @sort()
-    @allButton.on 'click', => @all()
+  handleEvents: =>
+    @totalButton.on 'click', => @totalFailures()
 
-  sort: ->
-    @setItems @items.sort (a, b) ->
-      return -1 if a.name < b.name
-      return 1 if a.name > b.name
-      return 0
-
-  all: ->
-    @cancel()
-    @controller.openLogs(@projectPath, @items)
-
-  selected: ->
-    @cancel()
-    @controller.openLogs(@projectPath, @getSelectedItems)
-
+  totalFailures: ->
+    @setItems @controller.totalFailed @items
 
   viewForItem: (job) ->
-    artifactIcon = if job.artifacts_file then "| <span class='icon gitlab-artifact'/>" else ""
-    "<li> <span class='icon gitlab-#{job.status}'/> <strong>#{job.name}</strong> (#{job.id}) | ♨︎ #{Math.round(job.duration)}s #{artifactIcon} | <span class='icon icon-clock'/> #{job.finished_at} | <small>#{job.runner?.description}</small> | <img src='#{job.user?.avatar_url}' class='gitlab-avatar'/> #{job.user?.name} </li>"
+    artifactIcon = if job.artifacts_file then "icon gitlab-artifact" else "no-icon"
+    "<li class='two-lines'>
+      <div class='status status-added #{artifactIcon}'></div>
+      <div class='primary-line icon gitlab-#{job.status}'>
+        #{job.name}
+        <i class='text-muted'> ♨︎ #{@toHHMMSS(job.duration)}</i>
+        <span class='pull-right text-muted'>#{job.id}</span>
+      </div>
+      <div class='secondary-line no-icon'>
+        <span class=''> #{moment(job.finished_at).format('lll')} </span>
+        <span class='icon icon-server'>#{job.runner?.description}</span>
+        <img src='#{job.user?.avatar_url}' class='gitlab-avatar' /> #{job.user?.name}
+    </li>"
 
   confirmed: (job) =>
     @cancel()

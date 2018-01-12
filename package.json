@@ -23,7 +23,8 @@
   "dependencies": {
     "atom-space-pen-views": "^2.2.0",
     "git-url-parse": "^7.0.0",
-    "isomorphic-fetch": "^2.2.1"
+    "isomorphic-fetch": "^2.2.1",
+    "moment": "^2.20.1"
   },
   "devDependencies": {
     "nock": "^9.0.14"
