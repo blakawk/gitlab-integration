@@ -32,7 +32,14 @@ class JobSelectorView extends SelectListView
       return 1 if a.id > b.id
       return 0
 
-    @setItems jobs
+    {alwaysSuccess, unstable, alwaysFailed, total} = @controller.statistics(jobs)
+
+    organized = []
+    organized.concat alwaysFailed
+    organized.concat unstable
+    organized.concat alwaysSuccess
+
+    @setItems organized
 
     @panel ?= atom.workspace.addModalPanel(item: this)
     @panel.show()

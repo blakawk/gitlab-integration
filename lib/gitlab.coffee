@@ -215,13 +215,11 @@ class GitlabStatus
         @openGitlabCICD(projectPath)
 
     openJobSelector: (projectPath, stage) ->
-      selector = new JobSelectorView
-      selector.initialize(stage.jobs, @ , projectPath)
+      selector = new JobSelectorView(stage.jobs, @ , projectPath)
 
     openPipelineSelector: (projectPath) ->
-      selector = new PipelineSelectorView
       { host, project, repos } = @projects[projectPath]
-      selector.initialize(project.pipelines, @ , projectPath)
+      selector = new PipelineSelectorView(project.pipelines, @ , projectPath)
 
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
