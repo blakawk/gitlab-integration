@@ -110,6 +110,12 @@ class StatusBarView extends HTMLElement
             icon.onclick =  (e) =>
                 @controller.openPipeline(project, stages);
 
+            pipeline = document.createElement('span')
+            pipeline.innerHTML = "#{stages[0]?.pipeline} &nbsp;"
+            pipeline.onclick = (e) =>
+              @controller.openPipelineSelector(project);
+            status.appendChild pipeline
+
             stages.forEach((stage) =>
                 failedJobs =  stage.jobs.filter( (job) ->  job.status is 'failed' )
 

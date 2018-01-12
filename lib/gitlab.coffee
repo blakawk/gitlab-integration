@@ -2,6 +2,7 @@ fetch = require 'isomorphic-fetch'
 log = require './log'
 shell = require('electron').shell;
 JobSelectorView = require './job-selector-view'
+PipelineSelectorView = require './pipeline-selector-view'
 
 class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
@@ -217,12 +218,23 @@ class GitlabStatus
       selector = new JobSelectorView
       selector.initialize(stage.jobs, @ , projectPath)
 
+    openPipelineSelector: (projectPath) ->
+      selector = new PipelineSelectorView
+      { host, project, repos } = @projects[projectPath]
+      selector.initialize(project.pipelines, @ , projectPath)
+
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
 
     update: ->
         @pending = Object.keys(@projects).slice()
         @updatePipelines()
+
+    updatePipeline: (pipeline, projectPath) ->
+      { host, project, repos } = @projects[projectPath]
+      @jobs[project.path_with_namespace] = null
+      project.userForcedPipeline = pipeline
+      @updateJobs(host, project, pipeline)
 
     updatePipelines: ->
         Object.keys(@projects).map(
@@ -241,8 +253,15 @@ class GitlabStatus
                     @fetch(host, "projects/#{project.id}/pipelines#{ref}").then(
                         (pipelines) =>
                             log "received pipelines from #{host}/#{project.id}", pipelines
+                            project.pipelines = pipelines;
                             if pipelines.length > 0
-                                @updateJobs(host, project, pipelines[0])
+                                if project.userForcedPipeline
+                                  currentPipeline = pipelines.filter( (p) => p.id is project.userForcedPipeline.id)
+                                if not currentPipeline or currentPipeline.length is 0
+                                  currentPipeline = pipelines[0]
+                                  project.userForcedPipeline = null
+                                @updateJobs(host, project, currentPipeline)
+                                @loadPipelineJobs(host, project, pipeline) for pipeline in pipelines
                             else
                                 @onJobs(project, [])
                     ).catch((error) =>
@@ -292,7 +311,7 @@ class GitlabStatus
                         firstFailedJob: stage.jobs
                             .filter( (job) ->  job.status is 'failed' )?[0]
 
-                        status: stage.jobs
+                        status: stage?.jobs
                             .sort((a, b) -> b.id - a.id)
                             .reduce((status, job) ->
                                 switch status
@@ -307,6 +326,34 @@ class GitlabStatus
         ).catch((error) =>
             console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
             @endUpdate(project)
+        )
+
+    alwaysFailed: (items)->
+        passedNames = items.filter((job) => job.status is "success").map( (job)=> job.name)
+        return items.filter((job) => job.status is "failed" and job.name not in passedNames)
+
+    alwaysSuccess: (items)->
+        failedNames = items.filter((job) => job.status is "failed").map( (job)=> job.name)
+        return items.filter((job) => job.status is "success" and job.name not in failedNames)
+
+    statistics: (jobs)->
+      if jobs
+        total = jobs.filter ( (j) => j.status is 'success' or 'failed')
+
+        alwaysSuccess = @alwaysSuccess( jobs )
+        success = jobs.filter ( (j) => j.status is 'success')
+        unstable = success.filter( (j) => j not in alwaysSuccess)
+        alwaysFailed = @alwaysFailed( jobs )
+
+        return {alwaysSuccess, unstable, alwaysFailed, total}
+      else
+        return {alwaysSuccess:[], unstable:[], alwaysFailed:[], total:[]}
+
+    loadPipelineJobs: (host, project, pipeline) ->
+        @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs", true)
+        .then((jobs) -> pipeline.loadedJobs = jobs)
+        .catch((error) =>
+            console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
         )
 
     onJobs: (project, stages) ->
