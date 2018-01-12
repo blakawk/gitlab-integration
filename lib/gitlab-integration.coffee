@@ -153,7 +153,7 @@ class GitlabIntegration
 
         atom.commands.add 'atom-workspace',
           'gitlab-integration:reload': () =>
-              @handleProjects(atom.project.getDirectories())
+              @gitlab.update()
 
         @handleProjects(atom.project.getDirectories())
         @subscriptions.add atom.project.onDidChangePaths (paths) =>
