@@ -31,13 +31,9 @@ class JobSelectorView extends SelectListView
       return -1 if a.id < b.id
       return 1 if a.id > b.id
       return 0
+    {alwaysSuccess, unstable, alwaysFailed, total} = controller.statistics(jobs)
 
-    {alwaysSuccess, unstable, alwaysFailed, total} = @controller.statistics(jobs)
-
-    organized = []
-    organized.concat alwaysFailed
-    organized.concat unstable
-    organized.concat alwaysSuccess
+    organized = alwaysFailed.concat(alwaysSuccess).concat(unstable)
 
     @setItems organized
 
@@ -45,21 +41,21 @@ class JobSelectorView extends SelectListView
     @panel.show()
     @focusFilterEditor()
     @getFilterKey = -> 'name'
-    @loadingArea.append $$ @extraContent
-    @handleEvents
-    # @loadingArea.show()
-
-  extraContent: ->
-    @div class: 'block', =>
-      @div class: 'input-block-item', =>
-        @button outlet: 'totalButton', class: 'btn btn-info', 'Total failures'
-
-
-  handleEvents: =>
-    @totalButton.on 'click', => @totalFailures()
-
-  totalFailures: ->
-    @setItems @controller.totalFailed @items
+  #   @loadingArea.append $$ @extraContent
+  #   @handleEvents
+  #   @loadingArea.show()
+  #
+  # extraContent: ->
+  #   @div class: 'block', =>
+  #     @div class: 'input-block-item', =>
+  #       @button outlet: 'totalButton', class: 'btn btn-info', 'Total failures'
+  #
+  #
+  # handleEvents: =>
+  #   @totalButton.on 'click', => @totalFailures()
+  #
+  # totalFailures: ->
+  #   @setItems @controller.totalFailed @items
 
   viewForItem: (job) ->
     artifactIcon = if job.artifacts_file then "icon gitlab-artifact" else "no-icon"

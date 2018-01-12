@@ -339,9 +339,9 @@ class GitlabStatus
         total = jobs.filter ( (j) => j.status is 'success' or 'failed')
 
         alwaysSuccess = @alwaysSuccess( jobs )
-        success = jobs.filter ( (j) => j.status is 'success')
-        unstable = success.filter( (j) => j not in alwaysSuccess)
+        failed = jobs.filter ( (j) => j.status is 'failed')
         alwaysFailed = @alwaysFailed( jobs )
+        unstable = failed.filter( (j) => j not in alwaysFailed)
 
         return {alwaysSuccess, unstable, alwaysFailed, total}
       else
