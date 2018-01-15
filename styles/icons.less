@@ -112,3 +112,29 @@
     width: 12px !important;
     height: 16px;
 }
+
+.progress-variant(@type) {
+  @text-color-name: "text-color-@{type}";
+
+  &::-webkit-progress-value {
+    background-color: @@text-color-name;
+  }
+}
+
+progress {
+  &.progress-info {
+    .progress-variant(info);
+  }
+
+  &.progress-success {
+    .progress-variant(success);
+  }
+
+  &.progress-warning {
+    .progress-variant(warning);
+  }
+
+  &.progress-error {
+    .progress-variant(error);
+  }
+}

@@ -57,6 +57,12 @@ class GitlabStatus
             else
                 res.json()
         )
+        .then( (result) =>
+          if result?.error
+            throw result
+          else
+            return result
+        )
 
     load: (host, q) ->
         log " -> fetch '#{q}' from '#{host}"
@@ -73,8 +79,8 @@ class GitlabStatus
         if not @projects[projectPath]? and not @updating[projectPath]?
             @updating[projectPath] = false
             @view.loading projectPath, "loading project..."
-            @fetch(host, "projects?membership=yes", true).then(
-                (projects) =>
+            @fetch(host, "projects?membership=yes", true)
+            .then( (projects) =>
                     log "received projects from #{host}", projects
                     if projects?
                         project = projects.filter(
@@ -90,8 +96,13 @@ class GitlabStatus
                     else
                         @view.unknown(projectPath)
             ).catch((error) =>
-                @updating[projectPath] = undefined
+                if error.error_description
+                  atom.notifications.addWarning(
+                    "Gitlab-Integration: #{error.error}: #{error.error_description}",
+                    {dismissable: true}
+                  )
                 console.error "cannot fetch projects from #{host}", error
+                @updating[projectPath] = undefined
                 @view.unknown(projectPath)
             )
 
@@ -347,9 +358,39 @@ class GitlabStatus
       else
         return {alwaysSuccess:[], unstable:[], alwaysFailed:[], total:[]}
 
+    toHHMMSS: (sec_num) ->
+      sec_num = Math.round(sec_num)
+      hours = Math.floor(sec_num / 3600)
+      minutes = Math.floor((sec_num - (hours * 3600)) / 60)
+      seconds = sec_num - (hours * 3600) - (minutes * 60)
+      if hours < 10
+        hours = "0"+hours
+      if minutes < 10
+        minutes = "0"+minutes
+      if seconds < 10
+        seconds = "0"+seconds
+      if hours is "00"
+        "#{minutes}m #{seconds}s"
+      else
+        "#{hours}h #{minutes}m #{seconds}s"
+
+    toType: (item, percentile) ->
+      deviation = Math.round(item.duration / percentile * 100)
+      if deviation < 85 then type = 'success'
+      if deviation > 115 then type = 'warning'
+      if deviation > 130 then type = 'error'
+      return type
+
     loadPipelineJobs: (host, project, pipeline) ->
         @fetch(host, "projects/#{project.id}/" + "pipelines/#{pipeline.id}/jobs", true)
-        .then((jobs) -> pipeline.loadedJobs = jobs)
+        .then((jobs) ->
+          if jobs?.length > 0
+            pipeline.commit = jobs[0].commit
+          pipeline.duration = jobs.filter( (j) -> j.status is 'success').reduce( ((max, j) ->
+            Math.max(max, j.duration)
+          ), 0)
+          pipeline.loadedJobs = jobs
+        )
         .catch((error) =>
             console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
         )
