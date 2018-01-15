@@ -1,5 +1,5 @@
 {$, $$, SelectListView} = require 'atom-space-pen-views'
-percentile = require('percentile')
+percentile = require 'percentile'
 moment = require 'moment'
 # moment.locale('sk')
 class JobSelectorView extends SelectListView
@@ -9,62 +9,62 @@ class JobSelectorView extends SelectListView
     @jobs = jobs
     @controller = controller
     @projectPath = projectPath
+    {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(@jobs)
     @addClass('overlay from-top')
+    @setItems jobs
+    @panel ?= atom.workspace.addModalPanel(item: this)
+    @focusFilterEditor()
+    $$(@extraContent(@)).insertBefore(@list)
+    @handleEvents()
+    @panel.show()
 
-    jobs?.sort (a, b) ->
+  getFilterKey: -> 'name'
+
+  extraContent: (thiz) ->
+    return ->
+      @div class: 'inline-block', =>
+        @button outlet: 'allButton', class: 'btn btn-info', ' All', =>
+          @span class: 'badge badge-small', thiz.jobs?.length
+        @div class: 'btn-group', =>
+          @button outlet: 'alwaysSuccessButton', class: 'btn btn-success', ' Always Success', =>
+            @span class: 'badge badge-small', thiz.alwaysSuccess?.length
+          @button outlet: 'sometimesFailedButton', class: 'btn btn-warning', ' Sometimes Failed', =>
+            @span class: 'badge badge-small', thiz.unstable?.length
+          @button outlet: 'alwaysFailedButton', class: 'btn btn-error', ' Always Failed', =>
+            @span class: 'badge badge-small', thiz.alwaysFailed?.length
+
+  handleEvents: ->
+    @wireOutlets(@)
+
+    @alwaysSuccessButton.on 'mouseover', (e) =>
+      @setItems @alwaysSuccess
+
+    @sometimesFailedButton.on 'mouseover', (e) =>
+      @setItems @unstable
+
+    @alwaysFailedButton.on 'mouseover', (e) =>
+      @setItems @alwaysFailed
+
+    @allButton.on 'mouseover', (e) =>
+      @setItems @jobs
+
+
+  populateList: () ->
+    @items?.sort (a, b) ->
       return -1 if a.name < b.name
       return 1 if a.name > b.name
       return -1 if a.id < b.id
       return 1 if a.id > b.id
       return 0
 
-    success = jobs.filter( (j) -> j.status is 'success')
-    @maxDuration = success.reduce( ((max, j) ->
+    @maxDuration = @items?.reduce( ((max, j) ->
       Math.max(max, j.duration)
     ), 0 )
-    @averageDuration = percentile(50, success, (item) -> item.duration).duration
 
-    {alwaysSuccess, unstable, alwaysFailed, total} = controller.statistics(jobs)
+    if @items?.length > 0
+      @averageDuration = percentile(50, @items, (item) -> item.duration).duration
 
-    organized = alwaysFailed.concat(alwaysSuccess).concat(unstable)
-
-    @setItems organized
-
-    @panel ?= atom.workspace.addModalPanel(item: this)
-    @panel.show()
-    @focusFilterEditor()
-    @getFilterKey = -> 'name'
-    @loadingArea.append $$ @extraContent
-    @handleEvents
-    @loadingArea.show()
-
-  extraContent: ->
-    @div class: 'input-block-item', =>
-      @button outlet: 'alwaysFailedButton', class: 'btn btn-error', 'Always Failed'
-      @button outlet: 'sometimesFailedButton', class: 'btn btn-warning', 'Sometimes Failed'
-      @button outlet: 'allButton', class: 'btn btn-info', 'All'
-
-  handleEvents: =>
-    @alwaysFailedButton.on 'mouseover', (e) =>
-      e.preventDefault()
-      @showAlwaysFailedOnly()
-    @sometimesFailedButton.on 'mouseover', (e) =>
-      e.preventDefault()
-      @showSometimesFailedButtonOnly()
-    @allButton.on 'mouseover', (e) =>
-      e.preventDefault()
-      @showAll()
-
-  showAlwaysFailedOnly: ->
-    {alwaysSuccess, unstable, alwaysFailed, total} = controller.statistics(jobs)
-    @setItems alwaysFailed
-
-  showSometimesFailedButtonOnly: ->
-    {alwaysSuccess, unstable, alwaysFailed, total} = controller.statistics(jobs)
-    @setItems unstable
-
-  showAll: ->
-    @setItems @jobs
+    super
 
   viewForItem: (job) ->
     type = @controller.toType(job, @averageDuration)

@@ -346,7 +346,7 @@ class GitlabStatus
         return items.filter((job) => job.status is "success" and job.name not in failedNames)
 
     statistics: (jobs)->
-      if jobs
+      if jobs?.filter
         total = jobs.filter ( (j) => j.status is 'success' or 'failed')
 
         alwaysSuccess = @alwaysSuccess( jobs )
