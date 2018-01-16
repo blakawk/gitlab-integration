@@ -37,7 +37,7 @@ class JobSelectorView extends SelectListView
             @button outlet: 'alwaysFailedButton', class: 'btn btn-error', ' Always Failed', =>
               @span class: 'badge badge-small', thiz.alwaysFailed?.length
         @div class: 'block', =>
-          @span class: 'icon icon-git-commit', commit?.message
+          @span class: 'icon icon-git-commit', commit?.title
           @span class: 'text-muted', " #{ref} / #{commit?.short_id}"
           @span class: 'icon icon-clock', moment(commit?.created_at).format('lll')
 

@@ -125,7 +125,7 @@ class PipelineSelectorView extends SelectListView
         </div>
         <div class='secondary-line no-icon'>
           <div class='block'>
-            <span class='text-muted'>#{pipeline.commit?.message}</span>
+            <span class='text-muted'>#{pipeline.commit?.title}</span>
           </div>
           <div class='block'>
             <progress class='inline-block progress-#{type}' max='#{@maxDuration}' value='#{pipeline.duration}'></progress>
