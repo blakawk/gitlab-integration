@@ -346,7 +346,7 @@ class GitlabStatus
         return items.filter((job) => job.status is "success" and job.name not in failedNames)
 
     statistics: (jobs)->
-      if jobs?.filter
+      if jobs?.length
         total = jobs.filter ( (j) => j.status is 'success' or 'failed')
 
         alwaysSuccess = @alwaysSuccess( jobs )
@@ -386,9 +386,13 @@ class GitlabStatus
         .then((jobs) ->
           if jobs?.length > 0
             pipeline.commit = jobs[0].commit
-          pipeline.duration = jobs.filter( (j) -> j.status is 'success').reduce( ((max, j) ->
-            Math.max(max, j.duration)
-          ), 0)
+            pipeline.created_at = jobs[0].created_at
+            pipeline.durationSuccess = jobs.filter( (j) -> j.status is 'success').reduce( ((max, j) ->
+              Math.max(max, j.duration)
+            ), 0)
+            pipeline.duration = jobs.reduce( ((max, j) ->
+                Math.max(max, j.duration)
+            ), 0)
           pipeline.loadedJobs = jobs
         )
         .catch((error) =>

@@ -1,5 +1,6 @@
 {$, $$, SelectListView} = require 'atom-space-pen-views'
-percentile = require('percentile')
+percentile = require 'percentile'
+moment = require 'moment'
 
 Array::unique = ->
   output = {}
@@ -9,60 +10,102 @@ Array::unique = ->
 class PipelineSelectorView extends SelectListView
   initialize: (pipelines, controller, projectPath) ->
     super
-    @projectPath = projectPath
+
+    @pipelines = pipelines
     @controller = controller
+    @projectPath = projectPath
+
     @addClass('overlay from-top')
+    @setItems pipelines
+    @panel ?= atom.workspace.addModalPanel(item: this)
+    @focusFilterEditor()
+    $$(@extraContent(@)).insertBefore(@error)
+    @handleEvents()
+    @panel.show()
 
-    pipelines?.sort (a, b) ->
-      return 1 if a.sha < b.sha
-      return -1 if a.sha > b.sha
-      return 1 if a.id < b.id
-      return -1 if a.id > b.id
-      return 0
+  getFilterKey: -> 'name'
 
-    success = pipelines.filter( (p) -> p.status is 'success')
-    @maxDuration = success.reduce( ((max, p) ->
+  extraContent: (thiz) ->
+    return ->
+      alwaysSuccess = thiz.asUniqueNames(thiz.alwaysSuccess)
+      unstable = thiz.asUniqueNames(thiz.unstable)
+      alwaysFailed = thiz.asUniqueNames(thiz.alwaysFailed)
+
+      @div class: 'block', =>
+        @div class: 'block', =>
+          @div class: 'btn-group', =>
+            @button outlet: 'sortById', class: 'btn', ' Sort by id'
+            @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
+            @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
+
+        @div class: 'block', =>
+          @raw "
+          <div class='block'>
+            <i class='text-info'> All 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDuration)}</i>
+            <i class='text-error'> All MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDuration)}</i>
+          </div>
+          <div class='block'>
+            <i class='text-info'> Success 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDurationSuccess)}</i>
+            <i class='text-error'> Sucess MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDurationSuccess)}</i>
+          </div>
+          <div class='block'>
+            <span class='text-success'>STABLE: #{alwaysSuccess}</span>
+          </div>
+          <div class='block'>
+            <span class='text-warning'>UNSTABLE: #{unstable}</span>
+          </div>
+          <div class='block'>
+            <span class='text-error'>ERROR: #{alwaysFailed}</span>
+          </div>
+          <div class='block'>
+            <span class='badge badge-success'>#{alwaysSuccess.length}</span>
+            <span class='badge badge-warning'>#{unstable.length}</span>
+            <span class='badge badge-error'>#{alwaysFailed.length}</span>
+          </div>"
+
+  handleEvents: ->
+    @wireOutlets(@)
+
+    @sortById.on 'mouseover', (e) =>
+      @setItems @items?.sort (a, b) ->
+        Number(a.id) - Number(b.id)
+
+    @sortBySha.on 'mouseover', (e) =>
+      @setItems @items?.sort (a, b) ->
+        return -1 if a.sha < b.sha
+        return 1 if a.sha > b.sha
+        return 0
+
+    @sortByDate.on 'mouseover', (e) =>
+      @setItems @items?.sort (a, b) ->
+        if a.created and b.created_at
+          moment(a.created_at).diff(moment(b.created_at))
+        else
+          Number(a.id) - Number(b.id)
+
+  populateList: () ->
+    @maxDuration = @items?.reduce( ((max, p) ->
       Math.max(max, p.duration)
     ), 0 )
-    @averageDuration = percentile(50, success, (item) -> item.duration).duration
+    @averageDuration = percentile(50, @items, (item) -> item.duration).duration
 
-    allJobs = pipelines.reduce(((all, p) ->
-      all.concat(p.loadedJobs)), [])
+    success = @items.filter( (p) -> p.status is 'success')
+    if success?.length > 0
+      @maxDurationSuccess = success?.reduce( ((max, p) ->
+        Math.max(max, p.durationSuccess)
+      ), 0 )
+      @averageDurationSuccess = percentile(50, success, (item) -> item.durationSuccess).durationSuccess
+
+    allJobs = @items.reduce(((all, p) ->
+      if p.loadedJobs?.length > 0
+        all.concat(p.loadedJobs)
+      else
+        all
+      ), [])
 
     {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(allJobs)
 
-    @setItems pipelines
-
-    @panel ?= atom.workspace.addModalPanel(item: this)
-    @panel.show()
-    @focusFilterEditor()
-    @getFilterKey = -> 'sha'
-    @loadingArea.append $ @extraContent()
-    @loadingArea.show()
-
-  extraContent: ->
-    alwaysSuccess = @asUniqueNames(@alwaysSuccess)
-    unstable = @asUniqueNames(@unstable)
-    alwaysFailed = @asUniqueNames(@alwaysFailed)
-
-    "<div class='inline-block'>
-      <i class='text-info'> 50% ♨︎ #{@controller.toHHMMSS(@averageDuration)}</i>
-      <i class='text-error'> MAX ♨︎ #{@controller.toHHMMSS(@maxDuration)}</i>
-    </div>
-    <div class='block'>
-      <span class='text-success'>STABLE: #{alwaysSuccess}</span>
-    </div>
-    <div class='block'>
-      <span class='text-warning'>UNSTABLE: #{unstable}</span>
-    </div>
-    <div class='block'>
-      <span class='text-error'>ERROR: #{alwaysFailed}</span>
-    </div>
-    <div class='block'>
-      <span class='badge badge-success'>#{alwaysSuccess.length}</span>
-      <span class='badge badge-warning'>#{unstable.length}</span>
-      <span class='badge badge-error'>#{alwaysFailed.length}</span>
-    </div>"
+    super
 
   asUniqueNames: (jobs) =>
     return jobs.map((j) => j.name).unique()
@@ -78,9 +121,12 @@ class PipelineSelectorView extends SelectListView
         <div class='primary-line icon gitlab-#{pipeline.status}'>
           #{pipeline.id}
           <span class='pull-right'>#{pipeline.ref} / #{pipeline.sha?.substring(0,5)}</span>
-          <span class='text-muted'>#{pipeline.commit?.message}</span>
+          <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')}</span>
         </div>
         <div class='secondary-line no-icon'>
+          <div class='block'>
+            <span class='text-muted'>#{pipeline.commit?.message}</span>
+          </div>
           <div class='block'>
             <progress class='inline-block progress-#{type}' max='#{@maxDuration}' value='#{pipeline.duration}'></progress>
             <i class='text-muted'> ♨︎ #{@controller.toHHMMSS(pipeline.duration)}</i>
@@ -95,6 +141,7 @@ class PipelineSelectorView extends SelectListView
           <span class='badge badge-info'>#{total.length}</span>
           <span class='badge badge-success'>#{alwaysSuccess.length}</span>
           <span class='badge badge-warning'>#{unstable.length}</span>
+          <span class='badge badge-error'>#{alwaysFailed.length}</span>
           <span class='badge badge-error'>#{alwaysFailed.length}</span>
       </li>"
     else
