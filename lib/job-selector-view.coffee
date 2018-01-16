@@ -14,24 +14,32 @@ class JobSelectorView extends SelectListView
     @setItems jobs
     @panel ?= atom.workspace.addModalPanel(item: this)
     @focusFilterEditor()
-    $$(@extraContent(@)).insertBefore(@list)
+    $$(@extraContent(@)).insertBefore(@error)
     @handleEvents()
     @panel.show()
 
   getFilterKey: -> 'name'
 
   extraContent: (thiz) ->
+    if thiz.jobs?.length > 0
+      commit = thiz.jobs[0].commit
+      ref = thiz.jobs[0].ref
     return ->
-      @div class: 'inline-block', =>
-        @button outlet: 'allButton', class: 'btn btn-info', ' All', =>
-          @span class: 'badge badge-small', thiz.jobs?.length
-        @div class: 'btn-group', =>
-          @button outlet: 'alwaysSuccessButton', class: 'btn btn-success', ' Always Success', =>
-            @span class: 'badge badge-small', thiz.alwaysSuccess?.length
-          @button outlet: 'sometimesFailedButton', class: 'btn btn-warning', ' Sometimes Failed', =>
-            @span class: 'badge badge-small', thiz.unstable?.length
-          @button outlet: 'alwaysFailedButton', class: 'btn btn-error', ' Always Failed', =>
-            @span class: 'badge badge-small', thiz.alwaysFailed?.length
+      @div class: 'block', =>
+        @div class: 'block', =>
+          @button outlet: 'allButton', class: 'btn btn-info', ' All', =>
+            @span class: 'badge badge-small', thiz.jobs?.length
+          @div class: 'btn-group', =>
+            @button outlet: 'alwaysSuccessButton', class: 'btn btn-success', ' Always Success', =>
+              @span class: 'badge badge-small', thiz.alwaysSuccess?.length
+            @button outlet: 'sometimesFailedButton', class: 'btn btn-warning', ' Sometimes Failed', =>
+              @span class: 'badge badge-small', thiz.unstable?.length
+            @button outlet: 'alwaysFailedButton', class: 'btn btn-error', ' Always Failed', =>
+              @span class: 'badge badge-small', thiz.alwaysFailed?.length
+        @div class: 'block', =>
+          @span class: 'icon icon-git-commit', commit?.message
+          @span class: 'text-muted', " #{ref} / #{commit?.short_id}"
+          @span class: 'icon icon-clock', moment(commit?.created_at).format('lll')
 
   handleEvents: ->
     @wireOutlets(@)
