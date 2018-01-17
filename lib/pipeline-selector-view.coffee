@@ -17,6 +17,7 @@ class PipelineSelectorView extends SelectListView
 
     @addClass('overlay from-top')
     @setItems pipelines
+    @calculate()
     @panel ?= atom.workspace.addModalPanel(item: this)
     @focusFilterEditor()
     $$(@extraContent(@)).insertBefore(@error)
@@ -32,12 +33,6 @@ class PipelineSelectorView extends SelectListView
       alwaysFailed = thiz.asUniqueNames(thiz.alwaysFailed)
 
       @div class: 'block', =>
-        @div class: 'block', =>
-          @div class: 'btn-group', =>
-            @button outlet: 'sortById', class: 'btn', ' Sort by id'
-            @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
-            @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
-
         @div class: 'block', =>
           @raw "
           <div class='block'>
@@ -62,28 +57,33 @@ class PipelineSelectorView extends SelectListView
             <span class='badge badge-warning'>#{unstable.length}</span>
             <span class='badge badge-error'>#{alwaysFailed.length}</span>
           </div>"
+        @div class: 'block', =>
+          @div class: 'btn-group', =>
+            @button outlet: 'sortById', class: 'btn', ' Sort by id'
+            @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
+            @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
 
   handleEvents: ->
     @wireOutlets(@)
 
     @sortById.on 'mouseover', (e) =>
-      @setItems @items?.sort (a, b) ->
+      @setItems @items.sort (a, b) ->
         return a.id - b.id
 
     @sortBySha.on 'mouseover', (e) =>
-      @setItems @items?.sort (a, b) ->
+      @setItems @items.sort (a, b) ->
         return -1 if a.sha < b.sha
         return 1 if a.sha > b.sha
         return 0
 
     @sortByDate.on 'mouseover', (e) =>
-      @setItems @items?.sort (a, b) ->
-        if a.created and b.created_at
-          return moment(a.created_at).diff(moment(b.created_at))
+      @setItems @items.sort (a, b) ->
+        if a.created_at and b.created_at
+          return moment(b.created_at).diff(moment(a.created_at))
         else
-          return a.id - b.id
+          return 0
 
-  populateList: () ->
+  calculate: () ->
     @maxDuration = @items?.reduce( ((max, p) ->
       Math.max(max, p.duration)
     ), 0 )
@@ -104,8 +104,6 @@ class PipelineSelectorView extends SelectListView
       ), [])
 
     {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(allJobs)
-
-    super
 
   asUniqueNames: (jobs) =>
     return jobs.map((j) => j.name).unique()
