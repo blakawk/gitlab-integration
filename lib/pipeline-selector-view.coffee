@@ -115,10 +115,13 @@ class PipelineSelectorView extends SelectListView
       type = @controller.toType(pipeline, @averageDuration)
 
       "<li class='two-lines'>
-        <div class='status status-added icon icon-git-commit'></div>
+        <div class='status icon icon-git-commit'></div>
         <div class='primary-line icon gitlab-#{pipeline.status}'>
           #{pipeline.id}
-          <span class='pull-right'>#{pipeline.ref} / #{pipeline.sha?.substring(0,5)}</span>
+          <span class='pull-right'>
+            <span class='icon icon-git-branch text-muted'>#{pipeline.ref}</span>
+            <span class='text-info'>#{pipeline.commit.short_id}</span>
+          </span>
           <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')}</span>
         </div>
         <div class='secondary-line no-icon'>
