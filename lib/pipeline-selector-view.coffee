@@ -23,7 +23,7 @@ class PipelineSelectorView extends SelectListView
     @handleEvents()
     @panel.show()
 
-  getFilterKey: -> 'name'
+  getFilterKey: -> 'search'
 
   extraContent: (thiz) ->
     return ->
@@ -68,7 +68,7 @@ class PipelineSelectorView extends SelectListView
 
     @sortById.on 'mouseover', (e) =>
       @setItems @items?.sort (a, b) ->
-        Number(a.id) - Number(b.id)
+        return a.id - b.id
 
     @sortBySha.on 'mouseover', (e) =>
       @setItems @items?.sort (a, b) ->
@@ -79,9 +79,9 @@ class PipelineSelectorView extends SelectListView
     @sortByDate.on 'mouseover', (e) =>
       @setItems @items?.sort (a, b) ->
         if a.created and b.created_at
-          moment(a.created_at).diff(moment(b.created_at))
+          return moment(a.created_at).diff(moment(b.created_at))
         else
-          Number(a.id) - Number(b.id)
+          return a.id - b.id
 
   populateList: () ->
     @maxDuration = @items?.reduce( ((max, p) ->
