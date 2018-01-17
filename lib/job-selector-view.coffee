@@ -12,6 +12,7 @@ class JobSelectorView extends SelectListView
     {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(@jobs)
     @addClass('overlay from-top')
     @setItems jobs
+    @calculate()
     @panel ?= atom.workspace.addModalPanel(item: this)
     @focusFilterEditor()
     $$(@extraContent(@)).insertBefore(@error)
@@ -38,41 +39,58 @@ class JobSelectorView extends SelectListView
               @span class: 'badge badge-small', thiz.alwaysFailed?.length
         @div class: 'block', =>
           @span class: 'icon icon-git-commit', commit?.title
-          @span class: 'text-muted', " #{ref} / #{commit?.short_id}"
-          @span class: 'icon icon-clock', moment(commit?.created_at).format('lll')
+          @span class: 'icon icon-git-branch text-muted pull-right', " #{ref} / #{commit?.short_id}"
+          @div class: 'block', =>
+            @span class: 'icon icon-clock text-center', moment(commit?.created_at).format('lll')
+        @div class: 'block', =>
+          @div class: 'btn-group', =>
+            @button outlet: 'sortById', class: 'btn', ' Sort by id'
+            @button outlet: 'sortByName', class: 'btn', ' Sort by name'
+            @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
 
   handleEvents: ->
     @wireOutlets(@)
 
     @alwaysSuccessButton.on 'mouseover', (e) =>
       @setItems @alwaysSuccess
+      @calculate()
 
     @sometimesFailedButton.on 'mouseover', (e) =>
       @setItems @unstable
+      @calculate()
 
     @alwaysFailedButton.on 'mouseover', (e) =>
       @setItems @alwaysFailed
+      @calculate()
 
     @allButton.on 'mouseover', (e) =>
       @setItems @jobs
+      @calculate()
 
+    @sortById.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        return a.id - b.id
 
-  populateList: () ->
-    @items?.sort (a, b) ->
-      return -1 if a.name < b.name
-      return 1 if a.name > b.name
-      return -1 if a.id < b.id
-      return 1 if a.id > b.id
-      return 0
+    @sortByName.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        return -1 if a.name < b.name
+        return 1 if a.name > b.name
+        return a.id - b.id
 
+    @sortByDate.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        if a.created_at and b.created_at
+          return moment(b.created_at).diff(moment(a.created_at))
+        else
+          return 0
+
+  calculate: () ->
     @maxDuration = @items?.reduce( ((max, j) ->
       Math.max(max, j.duration)
     ), 0 )
 
     if @items?.length > 0
       @averageDuration = percentile(50, @items, (item) -> item.duration).duration
-
-    super
 
   viewForItem: (job) ->
     type = @controller.toType(job, @averageDuration)
