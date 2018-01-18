@@ -391,6 +391,7 @@ class GitlabStatus
             pipeline.commit = jobs[0].commit
             pipeline.created_at = jobs[0].created_at
             pipeline.finished_at = jobs[jobs?.length-1].finished_at
+            pipeline.user = jobs[0].user
             pipeline.search = "id#{pipeline.id} ref#{pipeline.ref} sha#{pipeline.sha?.substring(0,5)}"
             pipeline.durationSuccess = jobs.filter( (j) -> j.status is 'success').reduce( ((max, j) ->
               Math.max(max, j.duration)

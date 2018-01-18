@@ -95,7 +95,7 @@ class PipelineSelectorView extends SelectListView
   calculate: () ->
     if @items?.length > 0
       @branch = @items[0].ref
-      
+
     @maxDuration = @items?.reduce( ((max, p) ->
       Math.max(max, p.duration)
     ), 0 )
@@ -136,7 +136,7 @@ class PipelineSelectorView extends SelectListView
           <span class='pull-right text-warning'>
           <span class=''>ABS ♨︎ #{@controller.toHHMMSS(pipeline.elapsed)}</span>
             &nbsp;
-            <span class='text-info'>#{pipeline.commit.short_id}</span>
+            <span class='text-info'>#{pipeline.commit?.short_id}</span>
           </span>
         </div>
         <div class='secondary-line no-icon'>
@@ -159,6 +159,9 @@ class PipelineSelectorView extends SelectListView
           <span class='badge badge-warning'>#{unstable.length}</span>
           <span class='badge badge-error'>#{alwaysFailed.length}</span>
           <span class='badge badge-error'>#{alwaysFailed.length}</span>
+          <span class='pull-right'>
+            <img src='#{pipeline.user?.avatar_url}' class='gitlab-avatar' /> #{pipeline.user?.name}
+          </span>
       </li>"
     else
       "<li class='two-lines'>

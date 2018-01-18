@@ -41,7 +41,9 @@ class JobSelectorView extends SelectListView
           @span class: 'icon icon-git-commit', commit?.title
           @span class: 'icon icon-git-branch text-muted pull-right', " #{ref} / #{commit?.short_id}"
           @div class: 'block', =>
-            @span class: 'icon icon-clock text-center', moment(commit?.created_at).format('lll')
+            @span class: 'icon icon-clock text-center', "#{moment(commit?.created_at).format('lll')} / #{moment(commit?.created_at).fromNow()}"
+            @span class: 'pull-right', =>
+              @raw "<img src='#{thiz.user?.avatar_url}' class='gitlab-avatar' /> #{thiz.user?.name}"
         @div class: 'block', =>
           @div class: 'btn-group', =>
             @button outlet: 'sortById', class: 'btn', ' Sort by id'
@@ -85,6 +87,8 @@ class JobSelectorView extends SelectListView
           return 0
 
   calculate: () ->
+    if @items?.length > 0
+      @user = @items[0].user
     @maxDuration = @items?.reduce( ((max, j) ->
       Math.max(max, j.duration)
     ), 0 )
@@ -109,7 +113,6 @@ class JobSelectorView extends SelectListView
         </div>
         <span class=''> #{moment(job.created_at).format('lll')}  - #{moment(job.finished_at).format('lll')} </span>
         <span class='icon icon-server'>#{job.runner?.description}</span>
-        <img src='#{job.user?.avatar_url}' class='gitlab-avatar' /> #{job.user?.name}
     </li>"
 
   confirmed: (job) =>
