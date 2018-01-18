@@ -90,7 +90,7 @@ class JobSelectorView extends SelectListView
     if @items?.length > 0
       @user = @items[0].user
     @maxDuration = @items?.reduce( ((max, j) ->
-      Math.max(max, j.duration)
+      Math.max(max, j.duration || 0)
     ), 0 )
 
     if @items?.length > 0

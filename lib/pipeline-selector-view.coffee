@@ -97,14 +97,14 @@ class PipelineSelectorView extends SelectListView
       @branch = @items[0].ref
 
     @maxDuration = @items?.reduce( ((max, p) ->
-      Math.max(max, p.duration)
+      Math.max(max, p.duration || 0)
     ), 0 )
     @averageDuration = percentile(50, @items, (item) -> item.duration).duration
 
     success = @items.filter( (p) -> p.status is 'success')
     if success?.length > 0
       @maxDurationSuccess = success?.reduce( ((max, p) ->
-        Math.max(max, p.durationSuccess)
+        Math.max(max, p.durationSuccess || 0)
       ), 0 )
       @averageDurationSuccess = percentile(50, success, (item) -> item.durationSuccess).durationSuccess
 
@@ -132,10 +132,8 @@ class PipelineSelectorView extends SelectListView
         <div class='status icon icon-git-commit'></div>
         <div class='primary-line icon gitlab-#{pipeline.status}'>
           #{pipeline.id}
-          <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')}</span>
-          <span class='pull-right text-warning'>
-          <span class=''>ABS ♨︎ #{@controller.toHHMMSS(pipeline.elapsed)}</span>
-            &nbsp;
+          <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')} / #{moment(pipeline.created_at).fromNow()}</span>
+          <span class='pull-right'>
             <span class='text-info'>#{pipeline.commit?.short_id}</span>
           </span>
         </div>
@@ -146,6 +144,7 @@ class PipelineSelectorView extends SelectListView
           <div class='block'>
             <progress class='inline-block progress-#{type}' max='#{@maxDuration}' value='#{pipeline.duration}'></progress>
             <i class='text-muted'> ♨︎ #{@controller.toHHMMSS(pipeline.duration)}</i>
+            <span class='text-warning'> / ABS #{@controller.toHHMMSS(pipeline.elapsed)}</span>
           </div>
           <span class='text-success'>#{@asUniqueNames(alwaysSuccess)}</span>
           <div class='block'>
