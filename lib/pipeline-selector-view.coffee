@@ -34,16 +34,24 @@ class PipelineSelectorView extends SelectListView
 
       @div class: 'block', =>
         @div class: 'block', =>
+          @span class: 'icon icon-git-branch', " #{thiz.branch}"
+
+        @div class: 'block', =>
           @raw "
           <div class='block'>
             <i class='text-info'> All 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDuration)}</i>
             <i class='text-error'> All MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDuration)}</i>
           </div>
-          <div class='block'>
-            <i class='text-info'> Success 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDurationSuccess)}</i>
-            <i class='text-error'> Sucess MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDurationSuccess)}</i>
-          </div>
-          <div class='block'>
+          "
+
+          if thiz.maxDurationSuccess
+            @raw "<div class='block'>
+              <i class='text-info'> Success 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDurationSuccess)}</i>
+              <i class='text-error'> Sucess MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDurationSuccess)}</i>
+            </div>
+            "
+
+          @raw "<div class='block'>
             <span class='text-success'>STABLE: #{alwaysSuccess}</span>
           </div>
           <div class='block'>
@@ -57,6 +65,7 @@ class PipelineSelectorView extends SelectListView
             <span class='badge badge-warning'>#{unstable.length}</span>
             <span class='badge badge-error'>#{alwaysFailed.length}</span>
           </div>"
+
         @div class: 'block', =>
           @div class: 'btn-group', =>
             @button outlet: 'sortById', class: 'btn', ' Sort by id'
@@ -84,6 +93,9 @@ class PipelineSelectorView extends SelectListView
           return 0
 
   calculate: () ->
+    if @items?.length > 0
+      @branch = @items[0].ref
+      
     @maxDuration = @items?.reduce( ((max, p) ->
       Math.max(max, p.duration)
     ), 0 )
@@ -109,6 +121,8 @@ class PipelineSelectorView extends SelectListView
     return jobs.map((j) => j.name).unique()
 
   viewForItem: (pipeline) ->
+    pipeline.elapsed = moment(pipeline.finished_at).diff(moment(pipeline.created_at), 'seconds')
+
     if pipeline.loadedJobs
       {alwaysSuccess, unstable, alwaysFailed, total} = @controller.statistics(pipeline.loadedJobs)
 
@@ -118,11 +132,12 @@ class PipelineSelectorView extends SelectListView
         <div class='status icon icon-git-commit'></div>
         <div class='primary-line icon gitlab-#{pipeline.status}'>
           #{pipeline.id}
-          <span class='pull-right'>
-            <span class='icon icon-git-branch text-muted'>#{pipeline.ref}</span>
+          <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')}</span>
+          <span class='pull-right text-warning'>
+          <span class=''>ABS ♨︎ #{@controller.toHHMMSS(pipeline.elapsed)}</span>
+            &nbsp;
             <span class='text-info'>#{pipeline.commit.short_id}</span>
           </span>
-          <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')}</span>
         </div>
         <div class='secondary-line no-icon'>
           <div class='block'>
