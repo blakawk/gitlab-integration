@@ -157,7 +157,6 @@ class PipelineSelectorView extends SelectListView
           <span class='badge badge-success'>#{alwaysSuccess.length}</span>
           <span class='badge badge-warning'>#{unstable.length}</span>
           <span class='badge badge-error'>#{alwaysFailed.length}</span>
-          <span class='badge badge-error'>#{alwaysFailed.length}</span>
           <span class='pull-right'>
             <img src='#{pipeline.user?.avatar_url}' class='gitlab-avatar' /> #{pipeline.user?.name}
           </span>
