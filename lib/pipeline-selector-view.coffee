@@ -123,7 +123,7 @@ class PipelineSelectorView extends SelectListView
   viewForItem: (pipeline) ->
     pipeline.elapsed = moment(pipeline.finished_at).diff(moment(pipeline.created_at), 'seconds')
 
-    if pipeline.loadedJobs
+    if pipeline.loadedJobs?.length > 0
       {alwaysSuccess, unstable, alwaysFailed, total} = @controller.statistics(pipeline.loadedJobs)
 
       type = @controller.toType(pipeline, @averageDuration)
