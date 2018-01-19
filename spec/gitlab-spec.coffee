@@ -264,3 +264,24 @@ describe "GitLab API", ->
                 project: project
                 repos: repos
             )
+
+    it "correctly react to removed projects", ->
+        repos = jasmine.createSpyObj 'repos', ['getShortHead']
+        repos.getShortHead.andThrow(new Error('Repository has been destroyed'))
+        spyOn gitlab, 'updateJobs'
+
+        gitlab.projects =
+            'dummy/project':
+                host: 'gitlab-api'
+                project: project
+                repos: repos
+
+        promise = Promise.all(gitlab.updatePipelines())
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(gitlab.updateJobs).not.toHaveBeenCalled()
+            expect(gitlab.view.loading).not.toHaveBeenCalled()
+            expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith({})

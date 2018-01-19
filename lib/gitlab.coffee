@@ -105,7 +105,12 @@ class GitlabStatus
                 { host, project, repos } = @projects[projectPath]
                 if project? and project.id? and not @updating[projectPath]
                     @updating[projectPath] = true
-                    ref = repos?.getShortHead?()
+                    try
+                        ref = repos?.getShortHead?()
+                    catch error
+                        console.error "cannot get project #{projectPath} ref", error
+                        @projects[projectPath] = undefined
+                        return Promise.resolve(@endUpdate(projectPath))
                     if ref?
                         log "project #{project} ref is #{ref}"
                         ref = "?ref=#{ref}"
@@ -122,7 +127,7 @@ class GitlabStatus
                                 @onJobs(project, [])
                     ).catch((error) =>
                         console.error "cannot fetch pipelines for project #{projectPath}", error
-                        @endUpdate(project)
+                        Promise.resolve(@endUpdate(projectPath))
                     )
         )
 
@@ -133,7 +138,7 @@ class GitlabStatus
         if @pending.length is 0
             @view.onStagesUpdate(@jobs)
             @schedule()
-        @jobs[project.path_with_namespace]
+        @jobs[project]
 
     updateJobs: (host, project, pipeline) ->
         if not @jobs[project.path_with_namespace]?
@@ -180,7 +185,7 @@ class GitlabStatus
                 ))
         ).catch((error) =>
             console.error "cannot fetch jobs for pipeline ##{pipeline.id} of project #{project.path_with_namespace}", error
-            @endUpdate(project)
+            Promise.resolve(@endUpdate(project.path_with_namespace))
         )
 
     onJobs: (project, stages) ->
