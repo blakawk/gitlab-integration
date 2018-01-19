@@ -297,6 +297,7 @@ class GitlabStatus
             if jobs.length is 0
                 @onJobs(project, [
                     name: pipeline.name
+                    pipeline: pipeline.id
                     status: pipeline.status
                     jobs: []
                 ])
