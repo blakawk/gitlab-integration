@@ -5,6 +5,7 @@ class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
         @token = atom.config.get('gitlab-integration.token')
         @period = atom.config.get('gitlab-integration.period')
+        @unsecureSsl = atom.config.get('gitlab-integration.unsecureSsl')
         @updating = {}
         @watchTimeout = null
 
@@ -50,7 +51,7 @@ class GitlabStatus
                 res.body
         )
 
-    get: (url) ->
+    get: (url) =>
         request({
             method: 'GET',
             uri: url,
@@ -59,6 +60,9 @@ class GitlabStatus
             },
             resolveWithFullResponse: true,
             json: true,
+            agentOptions: {
+                rejectUnauthorized: @unsecureSsl is false,
+            }
         })
 
     watch: (host, projectPath, repos) ->
