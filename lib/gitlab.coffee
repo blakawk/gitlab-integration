@@ -1,4 +1,4 @@
-fetch = require 'isomorphic-fetch'
+request = require 'request-promise-native'
 log = require './log'
 
 class GitlabStatus
@@ -9,37 +9,27 @@ class GitlabStatus
         @watchTimeout = null
 
     fetch: (host, q, paging=false) ->
-        log " -> fetch '#{q}' from '#{host}"
-        fetch(
-            "https://#{host}/api/v4/#{q}", {
-                headers: {
-                    "PRIVATE-TOKEN": @token,
-                }
-            }
-        ).then((res) =>
+        log " -> fetch '#{q}' from '#{host}'"
+        @get("https://#{host}/api/v4/#{q}").then((res) =>
             log " <- ", res
-            if res.headers.get('X-Next-Page')
+            if res.headers['x-next-page']
                 if paging
-                    log " -> retrieving #{res.headers.get('X-Total-Pages')} pages"
+                    log " -> retrieving #{res.headers['x-total-pages']} pages"
                     Promise.all(
-                        [res.json()].concat(
+                        [res.body].concat(
                             new Array(
-                                parseInt(res.headers.get('X-Total-Pages')) - 1,
+                                parseInt(res.headers['x-total-pages']) - 1,
                             ).fill(0).map(
                                 (dum, i) =>
                                     log " -> page #{i + 2}"
-                                    fetch(
+                                    @get(
                                         "https://#{host}/api/v4/#{q}" +
                                         (if q.includes('?') then '&' else '?') +
-                                        "per_page=" + res.headers.get('X-Per-Page') +
-                                        "&page=#{i+2}", {
-                                            headers: {
-                                                'PRIVATE-TOKEN': @token
-                                            }
-                                        }
+                                        "per_page=" + res.headers['x-per-page'] +
+                                        "&page=#{i+2}"
                                     ).then((page) =>
                                         log "     <- page #{i + 2}", page
-                                        page.json()
+                                        page.body
                                     ).catch((error) =>
                                         console.error "cannot fetch page #{i + 2}", error
                                         Promise.resolve([])
@@ -55,10 +45,21 @@ class GitlabStatus
                     )
                 else
                     log " -> ignoring paged output for #{q}"
-                    res.json()
+                    res.body
             else
-                res.json()
+                res.body
         )
+
+    get: (url) ->
+        request({
+            method: 'GET',
+            uri: url,
+            headers: {
+                "PRIVATE-TOKEN": @token,
+            },
+            resolveWithFullResponse: true,
+            json: true,
+        })
 
     watch: (host, projectPath, repos) ->
         projectPath = projectPath.toLowerCase()

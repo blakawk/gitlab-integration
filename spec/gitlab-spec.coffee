@@ -1,4 +1,5 @@
 GitLab = require '../lib/gitlab'
+log = require '../lib/log'
 nock = require 'nock'
 
 describe "GitLab API", ->
@@ -44,6 +45,7 @@ describe "GitLab API", ->
         { name: 'stage-5', status: 'pending', jobs: jobs.slice(9, 13).reverse() },
     ]
     beforeEach ->
+        log.debug = true
         view = jasmine.createSpyObj 'view', [
             'loading', 'unknown', 'onStagesUpdate'
         ]
