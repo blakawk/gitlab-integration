@@ -18,6 +18,11 @@ class GitlabIntegration
             minimum: 1000
             default: 5000
             type: 'integer'
+        unsecureSsl:
+            title: 'Disable SSL certificate check'
+            description: 'In case your Gitlab server is using a self-signed certificate, enable this option to allow plugin to work'
+            type: 'boolean'
+            default: false
         debug:
             title: 'Enable debug output in console'
             type: 'boolean'

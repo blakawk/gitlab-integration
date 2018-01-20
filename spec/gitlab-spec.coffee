@@ -1,4 +1,5 @@
 GitLab = require '../lib/gitlab'
+log = require '../lib/log'
 nock = require 'nock'
 
 describe "GitLab API", ->
@@ -44,6 +45,7 @@ describe "GitLab API", ->
         { name: 'stage-5', status: 'pending', jobs: jobs.slice(9, 13).reverse() },
     ]
     beforeEach ->
+        log.debug = true
         view = jasmine.createSpyObj 'view', [
             'loading', 'unknown', 'onStagesUpdate'
         ]
@@ -75,7 +77,13 @@ describe "GitLab API", ->
         scope = nock('https://gitlab-api')
             .get('/api/v4/projects?membership=yes')
             .reply(200, [ sensitiveProject ])
+        scopePipelines = nock('https://gitlab-api')
+            .get('/api/v4/projects/888/pipelines')
+            .reply(200, pipelines)
+
         promise = gitlab.watch('gitlab-api', 'sensitive/project')
+            .then((onStagesUpdate) -> Promise.all(onStagesUpdate))
+
         expect(gitlab.view.loading).toHaveBeenCalledWith(
             'sensitive/project',
             'loading project...',
@@ -86,9 +94,13 @@ describe "GitLab API", ->
 
         runs ->
             expect(scope.isDone()).toBe(true)
+            expect(scopePipelines.isDone()).toBe(true)
+            expect(gitlab.view.onStagesUpdate).toHaveBeenCalled()
             expect(gitlab.projects['sensitive/project']).toEqual(
                 host: 'gitlab-api'
-                project: sensitiveProject
+                project: Object.assign(sensitiveProject, {
+                    path_with_namespace: 'sensitive/project'
+                })
                 repos: undefined
             )
 
@@ -262,3 +274,24 @@ describe "GitLab API", ->
                 project: project
                 repos: repos
             )
+
+    it "correctly react to removed projects", ->
+        repos = jasmine.createSpyObj 'repos', ['getShortHead']
+        repos.getShortHead.andThrow(new Error('Repository has been destroyed'))
+        spyOn gitlab, 'updateJobs'
+
+        gitlab.projects =
+            'dummy/project':
+                host: 'gitlab-api'
+                project: project
+                repos: repos
+
+        promise = Promise.all(gitlab.updatePipelines())
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(gitlab.updateJobs).not.toHaveBeenCalled()
+            expect(gitlab.view.loading).not.toHaveBeenCalled()
+            expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith({})

@@ -1,5 +1,15 @@
 # Change Log
 
+## [v0.4.5](https://github.com/blakawk/gitlab-integration/tree/v0.4.5) (2018-01-20)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.3...v0.4.5)
+
+**Closed issues:**
+
+- SELF\_SIGNED\_CERT\_IN\_CHAIN [\#30](https://github.com/blakawk/gitlab-integration/issues/30)
+- Uncaught Error: Repository has been destroyed [\#29](https://github.com/blakawk/gitlab-integration/issues/29)
+- Breaks if group name is case sensitive [\#26](https://github.com/blakawk/gitlab-integration/issues/26)
+
+
 ## [v0.4.3](https://github.com/blakawk/gitlab-integration/tree/v0.4.3) (2017-12-11)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.2...v0.4.3)
 
