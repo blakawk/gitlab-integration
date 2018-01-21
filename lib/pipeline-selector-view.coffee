@@ -71,6 +71,7 @@ class PipelineSelectorView extends SelectListView
             @button outlet: 'sortById', class: 'btn', ' Sort by id'
             @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
             @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
+            @button outlet: 'sortByDuration', class: 'btn', ' Sort by duration'
 
   handleEvents: ->
     @wireOutlets(@)
@@ -91,6 +92,10 @@ class PipelineSelectorView extends SelectListView
           return moment(b.created_at).diff(moment(a.created_at))
         else
           return 0
+
+    @sortByDuration.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        return b.duration - a.duration
 
   calculate: (items) ->
     if items?.length > 0
