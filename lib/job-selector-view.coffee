@@ -49,6 +49,7 @@ class JobSelectorView extends SelectListView
             @button outlet: 'sortById', class: 'btn', ' Sort by id'
             @button outlet: 'sortByName', class: 'btn', ' Sort by name'
             @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
+            @button outlet: 'sortByDuration', class: 'btn', ' Sort by duration'
 
   handleEvents: ->
     @wireOutlets(@)
@@ -85,6 +86,10 @@ class JobSelectorView extends SelectListView
           return moment(b.created_at).diff(moment(a.created_at))
         else
           return 0
+
+    @sortByDuration.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        return b.duration - a.duration
 
   calculate: () ->
     if @items?.length > 0
