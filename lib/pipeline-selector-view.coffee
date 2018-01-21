@@ -16,8 +16,8 @@ class PipelineSelectorView extends SelectListView
     @projectPath = projectPath
 
     @addClass('overlay from-top')
+    @calculate pipelines
     @setItems pipelines
-    @calculate()
     @panel ?= atom.workspace.addModalPanel(item: this)
     @focusFilterEditor()
     $$(@extraContent(@)).insertBefore(@error)
@@ -92,30 +92,31 @@ class PipelineSelectorView extends SelectListView
         else
           return 0
 
-  calculate: () ->
-    if @items?.length > 0
-      @branch = @items[0].ref
+  calculate: (items) ->
+    if items?.length > 0
+      @branch = items[0].ref
 
-    @maxDuration = @items?.reduce( ((max, p) ->
-      Math.max(max, p.duration || 0)
-    ), 0 )
-    @averageDuration = percentile(50, @items, (item) -> item.duration).duration
-
-    success = @items.filter( (p) -> p.status is 'success')
-    if success?.length > 0
-      @maxDurationSuccess = success?.reduce( ((max, p) ->
-        Math.max(max, p.durationSuccess || 0)
+      @maxDuration = items.reduce( ((max, p) ->
+        Math.max(max, p.duration || 0)
       ), 0 )
-      @averageDurationSuccess = percentile(50, success, (item) -> item.durationSuccess).durationSuccess
 
-    allJobs = @items.reduce(((all, p) ->
-      if p.loadedJobs?.length > 0
-        all.concat(p.loadedJobs)
-      else
-        all
-      ), [])
+      @averageDuration = percentile(50, items, (item) -> item.duration).duration
 
-    {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(allJobs)
+      success = items.filter( (p) -> p.status is 'success')
+      if success?.length > 0
+        @maxDurationSuccess = success?.reduce( ((max, p) ->
+          Math.max(max, p.durationSuccess || 0)
+        ), 0 )
+        @averageDurationSuccess = percentile(50, success, (item) -> item.durationSuccess).durationSuccess
+
+      allJobs = items.reduce(((all, p) ->
+        if p.loadedJobs?.length > 0
+          all.concat(p.loadedJobs)
+        else
+          all
+        ), [])
+
+      {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(allJobs)
 
   asUniqueNames: (jobs) =>
     return jobs.map((j) => j.name).unique()

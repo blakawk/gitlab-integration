@@ -11,8 +11,8 @@ class JobSelectorView extends SelectListView
     @projectPath = projectPath
     {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(@jobs)
     @addClass('overlay from-top')
+    @calculate jobs
     @setItems jobs
-    @calculate()
     @panel ?= atom.workspace.addModalPanel(item: this)
     @focusFilterEditor()
     $$(@extraContent(@)).insertBefore(@error)
@@ -56,19 +56,17 @@ class JobSelectorView extends SelectListView
 
     @alwaysSuccessButton.on 'mouseover', (e) =>
       @setItems @alwaysSuccess
-      @calculate()
-
+      @calculate @items
     @sometimesFailedButton.on 'mouseover', (e) =>
       @setItems @unstable
-      @calculate()
-
+      @calculate @items
     @alwaysFailedButton.on 'mouseover', (e) =>
       @setItems @alwaysFailed
-      @calculate()
+      @calculate @items
 
     @allButton.on 'mouseover', (e) =>
       @setItems @jobs
-      @calculate()
+      @calculate @items
 
     @sortById.on 'mouseover', (e) =>
       @setItems @items.sort (a, b) ->
@@ -91,15 +89,13 @@ class JobSelectorView extends SelectListView
       @setItems @items.sort (a, b) ->
         return b.duration - a.duration
 
-  calculate: () ->
-    if @items?.length > 0
-      @user = @items[0].user
-    @maxDuration = @items?.reduce( ((max, j) ->
-      Math.max(max, j.duration || 0)
-    ), 0 )
-
-    if @items?.length > 0
-      @averageDuration = percentile(50, @items, (item) -> item.duration).duration
+  calculate: (items) ->
+    if items?.length > 0
+      @user = items[0].user
+      @averageDuration = percentile(50, items, (item) -> item.duration).duration
+      @maxDuration = items?.reduce( ((max, j) ->
+        Math.max(max, j.duration || 0)
+        ), 0 )
 
   viewForItem: (job) ->
     type = @controller.toType(job, @averageDuration)
