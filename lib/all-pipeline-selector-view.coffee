@@ -2,12 +2,7 @@
 percentile = require 'percentile'
 moment = require 'moment'
 
-Array::unique = ->
-  output = {}
-  output[@[key]] = @[key] for key in [0...@length]
-  value for key, value of output
-
-class PipelineSelectorView extends SelectListView
+class AllPipelineSelectorView extends SelectListView
   initialize: (pipelines, controller, projectPath) ->
     super
 
@@ -16,6 +11,7 @@ class PipelineSelectorView extends SelectListView
     @projectPath = projectPath
 
     @addClass('overlay from-top')
+    @globalCalculate pipelines
     @calculate pipelines
     @setItems pipelines
     @panel ?= atom.workspace.addModalPanel(item: this)
@@ -28,53 +24,39 @@ class PipelineSelectorView extends SelectListView
 
   extraContent: (thiz) ->
     return ->
-      alwaysSuccess = thiz.asUniqueNames(thiz.alwaysSuccess)
-      unstable = thiz.asUniqueNames(thiz.unstable)
-      alwaysFailed = thiz.asUniqueNames(thiz.alwaysFailed)
+      @div class: 'block', =>
+        @button outlet: 'allButton', class: 'btn btn-info', ' All', =>
+          @span class: 'badge badge-small', thiz.jobs?.length
+        @div class: 'btn-group', =>
+          @button outlet: 'successButton', class: 'btn btn-success', ' Success', =>
+            @span class: 'badge badge-small', thiz.success?.length
+          @button outlet: 'unstableButton', class: 'btn btn-warning', ' Unstable', =>
+            @span class: 'badge badge-small', thiz.unstable?.length
+          @button outlet: 'failedButton', class: 'btn btn-error', ' Failed', =>
+            @span class: 'badge badge-small', thiz.failed?.length
 
       @div class: 'block', =>
-        @div class: 'block', =>
-          @span class: 'icon icon-git-branch', " #{thiz.branch}"
-
-        @div class: 'block', =>
-          @raw "
-          <div class='block'>
-            <i class='text-info'> All 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDuration)}</i>
-            <i class='text-error'> All MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDuration)}</i>
-          </div>
-          "
-
-          if thiz.maxDurationSuccess
-            @raw "<div class='block'>
-              <i class='text-info'> Success 50% ♨︎ #{thiz.controller.toHHMMSS(thiz.averageDurationSuccess)}</i>
-              <i class='text-error'> Sucess MAX ♨︎ #{thiz.controller.toHHMMSS(thiz.maxDurationSuccess)}</i>
-            </div>
-            "
-
-          @raw "<div class='block'>
-            <span class='text-success'>STABLE: #{alwaysSuccess}</span>
-          </div>
-          <div class='block'>
-            <span class='text-warning'>UNSTABLE: #{unstable}</span>
-          </div>
-          <div class='block'>
-            <span class='text-error'>ERROR: #{alwaysFailed}</span>
-          </div>
-          <div class='block'>
-            <span class='badge badge-success'>#{alwaysSuccess.length}</span>
-            <span class='badge badge-warning'>#{unstable.length}</span>
-            <span class='badge badge-error'>#{alwaysFailed.length}</span>
-          </div>"
-
-        @div class: 'block', =>
-          @div class: 'btn-group', =>
-            @button outlet: 'sortById', class: 'btn', ' Sort by id'
-            @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
-            @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
-            @button outlet: 'sortByDuration', class: 'btn', ' Sort by duration'
+        @div class: 'btn-group', =>
+          @button outlet: 'sortById', class: 'btn', ' Sort by id'
+          @button outlet: 'sortBySha', class: 'btn', ' Sort by sha'
+          @button outlet: 'sortByDate', class: 'btn', ' Sort by date'
+          @button outlet: 'sortByDuration', class: 'btn', ' Sort by duration'
+          @button outlet: 'sortByBranch', class: 'btn', ' Sort by branch'
 
   handleEvents: ->
     @wireOutlets(@)
+
+    @successButton.on 'mouseover', (e) =>
+      @setItems @success
+      @calculate @items
+
+    @unstableButton.on 'mouseover', (e) =>
+      @setItems @unstable
+      @calculate @items
+
+    @failedButton.on 'mouseover', (e) =>
+      @setItems @failed
+      @calculate @items
 
     @sortById.on 'mouseover', (e) =>
       @setItems @items.sort (a, b) ->
@@ -97,10 +79,12 @@ class PipelineSelectorView extends SelectListView
       @setItems @items.sort (a, b) ->
         return b.duration - a.duration
 
+    @sortByBranch.on 'mouseover', (e) =>
+      @setItems @items.sort (a, b) ->
+        return a.ref - b.ref
+
   calculate: (items) ->
     if items?.length > 0
-      @branch = items[0].ref
-
       @maxDuration = items.reduce( ((max, p) ->
         Math.max(max, p.duration || 0)
       ), 0 )
@@ -114,14 +98,11 @@ class PipelineSelectorView extends SelectListView
         ), 0 )
         @averageDurationSuccess = percentile(50, success, (item) -> item.durationSuccess).durationSuccess
 
-      allJobs = items.reduce(((all, p) ->
-        if p.loadedJobs?.length > 0
-          all.concat(p.loadedJobs)
-        else
-          all
-        ), [])
-
-      {@alwaysSuccess, @unstable, @alwaysFailed, @total} = @controller.statistics(allJobs)
+  globalCalculate: (items) ->
+    if items?.length > 0
+      @success = items.filter( (p) -> p.status is 'success')
+      @failed = items.filter( (p) -> p.status is 'failed')
+      @unstable = items.filter( (p) -> p.status is 'success' and p.loadedJobs?.filter( (j) => j.status is 'failed')?.length > 0)
 
   asUniqueNames: (jobs) =>
     return jobs.map((j) => j.name).unique()
@@ -140,7 +121,8 @@ class PipelineSelectorView extends SelectListView
           #{pipeline.id}
           <span class='text-muted icon icon-clock'> #{moment(pipeline.created_at).format('lll')} / #{moment(pipeline.created_at).fromNow()}</span>
           <span class='pull-right'>
-            <span class='text-info'>#{pipeline.commit?.short_id}</span>
+            <span class='text-subtle'>#{pipeline.commit?.short_id}</span>
+            <span class='text-info'>#{pipeline.ref}</span>
           </span>
         </div>
         <div class='secondary-line no-icon'>
@@ -187,4 +169,4 @@ class PipelineSelectorView extends SelectListView
   cancelled: ->
     @panel.hide()
 
-module.exports = PipelineSelectorView
+module.exports = AllPipelineSelectorView

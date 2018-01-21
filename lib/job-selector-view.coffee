@@ -1,7 +1,7 @@
-{$, $$, SelectListView} = require 'atom-space-pen-views'
+{$$, SelectListView} = require 'atom-space-pen-views'
 percentile = require 'percentile'
 moment = require 'moment'
-# moment.locale('sk')
+
 class JobSelectorView extends SelectListView
   initialize: (jobs, controller, projectPath) ->
     super

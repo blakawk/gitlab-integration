@@ -110,10 +110,23 @@ class StatusBarView extends HTMLElement
             icon.onclick =  (e) =>
                 @controller.openPipeline(project, stages);
 
+            allPipeline = document.createElement('span')
+            allPipeline.classList.add('icon', 'icon-inbox')
+            @tooltips.push atom.tooltips.add allPipeline, {
+                title: "Open all pipeline selector"
+            }
+            allPipeline.onclick = (e) =>
+              @controller.openAllPipelineSelector(project);
+            status.appendChild allPipeline
+
             pipeline = document.createElement('span')
+            pipeline.classList.add('icon', "gitlab-#{stages[0]?.pipelineStatus}")
             pipeline.innerHTML = "#{stages[0]?.pipeline} &nbsp;"
             pipeline.onclick = (e) =>
               @controller.openPipelineSelector(project);
+            @tooltips.push atom.tooltips.add pipeline, {
+                title: "Open branch pipeline selector"
+            }
             status.appendChild pipeline
 
             stages.forEach((stage) =>

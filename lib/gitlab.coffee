@@ -3,6 +3,7 @@ log = require './log'
 shell = require('electron').shell;
 JobSelectorView = require './job-selector-view'
 PipelineSelectorView = require './pipeline-selector-view'
+AllPipelineSelectorView = require './all-pipeline-selector-view'
 
 class GitlabStatus
     constructor: (@view, @timeout=null, @projects={}, @pending=[], @jobs={}) ->
@@ -232,6 +233,19 @@ class GitlabStatus
       { host, project, repos } = @projects[projectPath]
       selector = new PipelineSelectorView(project.pipelines, @ , projectPath)
 
+    openAllPipelineSelector: (projectPath) ->
+      { host, project, repos } = @projects[projectPath]
+      @fetch(host, "projects/#{project.id}/pipelines")
+      .then( (pipelines) =>
+          loads = []
+          loads.push @loadPipelineJobs(host, project, pipeline) for pipeline in pipelines
+          Promise.all(loads).then( ()=>
+            return pipelines
+          )
+      )
+      .then( (pipelines) =>
+          selector = new AllPipelineSelectorView(pipelines, @ , projectPath)
+      )
     schedule: ->
         @timeout = setTimeout @update.bind(@), @period
 
@@ -251,7 +265,7 @@ class GitlabStatus
                 { host, project, repos } = @projects[projectPath]
                 if project? and project.id? and not @updating[projectPath]
                     @updating[projectPath] = true
-                    ref = repos?.getShortHead?()
+                    ref = project.userForcedPipeline?.ref || repos?.getShortHead?()
                     if ref?
                         log "project #{project} ref is #{ref}"
                         ref = "?ref=#{ref}"
@@ -265,8 +279,11 @@ class GitlabStatus
                             project.pipelines = pipelines;
                             if pipelines.length > 0
                                 if project.userForcedPipeline
-                                  currentPipeline = pipelines.filter( (p) => p.id is project.userForcedPipeline.id)
-                                if not currentPipeline or currentPipeline.length is 0
+                                  currentPipelineWrapped = pipelines.filter( (p) => p.id is project.userForcedPipeline.id)
+                                  # is in the pipelines?
+                                  if currentPipelineWrapped?.length > 0
+                                    currentPipeline = currentPipelineWrapped[0]
+                                if not currentPipeline
                                   currentPipeline = pipelines[0]
                                   project.userForcedPipeline = null
                                 @updateJobs(host, project, currentPipeline)
@@ -298,6 +315,7 @@ class GitlabStatus
                 @onJobs(project, [
                     name: pipeline.name
                     pipeline: pipeline.id
+                    pipelineStatus: pipeline.status
                     status: pipeline.status
                     jobs: []
                 ])
@@ -311,6 +329,7 @@ class GitlabStatus
                             stage =
                                 name: job.stage
                                 pipeline: pipeline.id
+                                pipelineStatus: pipeline.status
                                 status: 'created'
                                 jobs: []
                             stages = stages.concat([stage])

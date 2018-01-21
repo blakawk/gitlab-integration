@@ -4,6 +4,8 @@ GitUrlParse = require 'git-url-parse'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
 log = require './log'
+app = require('electron').app;
+moment = require 'moment'
 
 class GitlabIntegration
     config:
@@ -123,6 +125,8 @@ class GitlabIntegration
         )
 
     activate: (state) ->
+        if app
+          moment.locale(app.getLocale())
         @subscriptions = new CompositeDisposable
         @statusBarView = new StatusBarView
         @statusBarView.init()
