@@ -19,7 +19,7 @@ class JobSelectorView extends SelectListView
     @handleEvents()
     @panel.show()
 
-  getFilterKey: -> 'name'
+  getFilterKey: -> 'search'
 
   extraContent: (thiz) ->
     if thiz.jobs?.length > 0
