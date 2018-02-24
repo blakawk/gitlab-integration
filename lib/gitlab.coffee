@@ -113,7 +113,7 @@ class GitlabStatus
                         ref = repos?.getShortHead?()
                     catch error
                         console.error "cannot get project #{projectPath} ref", error
-                        @projects[projectPath] = undefined
+                        delete @projects[projectPath]
                         return Promise.resolve(@endUpdate(projectPath))
                     if ref?
                         log "project #{project} ref is #{ref}"

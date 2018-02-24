@@ -1,5 +1,13 @@
 # Change Log
 
+## [v0.4.6](https://github.com/blakawk/gitlab-integration/tree/v0.4.6) (2018-02-24)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.5...v0.4.6)
+
+**Closed issues:**
+
+- Uncaught TypeError: Cannot read property 'host' of undefined [\#31](https://github.com/blakawk/gitlab-integration/issues/31)
+
+
 ## [v0.4.5](https://github.com/blakawk/gitlab-integration/tree/v0.4.5) (2018-01-20)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.3...v0.4.5)
 

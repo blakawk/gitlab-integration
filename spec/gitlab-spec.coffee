@@ -287,6 +287,7 @@ describe "GitLab API", ->
                 repos: repos
 
         promise = Promise.all(gitlab.updatePipelines())
+            .then(-> Promise.all(gitlab.updatePipelines()))
 
         waitsForPromise ->
             promise
