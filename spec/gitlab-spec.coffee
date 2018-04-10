@@ -4,6 +4,8 @@ nock = require 'nock'
 
 describe "GitLab API", ->
     gitlab =
+    scopeHttp =
+    scopeHttps =
     project =
         id: 666
         path_with_namespace: 'dummy/project'
@@ -45,14 +47,15 @@ describe "GitLab API", ->
         { name: 'stage-5', status: 'pending', jobs: jobs.slice(9, 13).reverse() },
     ]
     beforeEach ->
-        log.debug = true
+        scopeHttp = nock('http://gitlab-api').get('*').replyWithError('HTTP not working')
+        scopeHttps = nock('https://gitlab-api')
         view = jasmine.createSpyObj 'view', [
             'loading', 'unknown', 'onStagesUpdate'
         ]
         gitlab = new GitLab view
 
     it "correctly watches a project", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects?membership=yes')
             .reply(200, [ project ])
 
@@ -74,7 +77,7 @@ describe "GitLab API", ->
             )
 
     it "ignores case when looking for a project", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects?membership=yes')
             .reply(200, [ sensitiveProject ])
         scopePipelines = nock('https://gitlab-api')
@@ -105,7 +108,7 @@ describe "GitLab API", ->
             )
 
     it "processes only the last pipeline", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects/666/pipelines')
             .reply(200, pipelines)
 
@@ -134,7 +137,7 @@ describe "GitLab API", ->
             )
 
     it "handles jobs with stages", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects/666/pipelines/2/jobs')
             .reply(200, jobs)
 
@@ -155,7 +158,7 @@ describe "GitLab API", ->
             )
 
     it "correctly handles external jobs", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects/666/pipelines/3/jobs')
             .reply(200, [])
 
@@ -176,7 +179,7 @@ describe "GitLab API", ->
             )
 
     it "correctly handles project with no pipelines", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects/666/pipelines')
             .reply(200, [])
 
@@ -204,7 +207,7 @@ describe "GitLab API", ->
             )
 
     it "correctly handles paging", ->
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects?membership=yes')
             .reply(200, [ project ], {
                 'X-Total-Pages': 2,
@@ -212,7 +215,7 @@ describe "GitLab API", ->
                 'X-Page': 1,
                 'X-Per-Page': 1,
             })
-        scopePage2 = nock('https://gitlab-api')
+        scopePage2 = scopeHttps
             .get('/api/v4/projects?membership=yes&per_page=1&page=2')
             .reply(200, [ anotherProject ], {
                 'X-Page': 2,
@@ -239,10 +242,10 @@ describe "GitLab API", ->
             )
 
     it "correctly requests pipelines for current branch", ->
-        projectScope = nock('https://gitlab-api')
+        projectScope = scopeHttps
             .get('/api/v4/projects?membership=yes')
             .reply(200, [ project ])
-        scope = nock('https://gitlab-api')
+        scope = scopeHttps
             .get('/api/v4/projects/666/pipelines?ref=abranch')
             .reply(200, pipelines)
 
@@ -296,3 +299,29 @@ describe "GitLab API", ->
             expect(gitlab.updateJobs).not.toHaveBeenCalled()
             expect(gitlab.view.loading).not.toHaveBeenCalled()
             expect(gitlab.view.onStagesUpdate).toHaveBeenCalledWith({})
+
+    it "fallbacks to HTTP in case HTTPS request does not work", ->
+        scopeHttps = scopeHttps
+            .get('/api/v4/projects?membership=yes')
+            .replyWithError('a HTTPS timeout was simulated')
+        scopeHttp = nock('http://gitlab-api')
+            .get('/api/v4/projects?membership=yes')
+            .reply(200, [ project ])
+
+        promise = gitlab.watch('gitlab-api', 'dummy/project')
+        expect(gitlab.view.loading).toHaveBeenCalledWith(
+            project.path_with_namespace,
+            'loading project...',
+        )
+
+        waitsForPromise ->
+            promise
+
+        runs ->
+            expect(scopeHttps.isDone()).toBe(true)
+            expect(scopeHttp.isDone()).toBe(true)
+            expect(gitlab.projects['dummy/project']).toEqual(
+                host: 'gitlab-api'
+                project: project
+                repos: undefined
+            )

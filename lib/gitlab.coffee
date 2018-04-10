@@ -8,10 +8,11 @@ class GitlabStatus
         @unsecureSsl = atom.config.get('gitlab-integration.unsecureSsl')
         @updating = {}
         @watchTimeout = null
+        @protocol = 'https'
 
     fetch: (host, q, paging=false) ->
         log " -> fetch '#{q}' from '#{host}'"
-        @get("https://#{host}/api/v4/#{q}").then((res) =>
+        @get("#{@protocol}://#{host}/api/v4/#{q}").then((res) =>
             log " <- ", res
             if res.headers['x-next-page']
                 if paging
@@ -24,7 +25,7 @@ class GitlabStatus
                                 (dum, i) =>
                                     log " -> page #{i + 2}"
                                     @get(
-                                        "https://#{host}/api/v4/#{q}" +
+                                        "#{@protocol}://#{host}/api/v4/#{q}" +
                                         (if q.includes('?') then '&' else '?') +
                                         "per_page=" + res.headers['x-per-page'] +
                                         "&page=#{i+2}"
@@ -63,7 +64,16 @@ class GitlabStatus
             agentOptions: {
                 rejectUnauthorized: @unsecureSsl is false,
             }
-        })
+        }).catch((error) =>
+            if url.startsWith('https')
+                console.error "cannot perform request #{url}, retrying using http", error
+                @get(url.replace('https', 'http')).then((result) =>
+                    @protocol = 'http'
+                    Promise.resolve(result)
+                ).catch((error) => Promise.reject(error))
+            else
+                Promise.reject(error)
+        )
 
     watch: (host, projectPath, repos) ->
         projectPath = projectPath.toLowerCase()
@@ -97,7 +107,8 @@ class GitlabStatus
             )
 
     schedule: ->
-        @timeout = setTimeout @update.bind(@), @period
+        if @period?
+            @timeout = setTimeout @update.bind(@), @period
 
     update: ->
         @pending = Object.keys(@projects).slice()
