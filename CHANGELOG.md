@@ -1,5 +1,13 @@
 # Change Log
 
+## [v0.4.7](https://github.com/blakawk/gitlab-integration/tree/v0.4.7) (2018-04-10)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.6...v0.4.7)
+
+**Closed issues:**
+
+- Private projects not loading [\#28](https://github.com/blakawk/gitlab-integration/issues/28)
+
+
 ## [v0.4.6](https://github.com/blakawk/gitlab-integration/tree/v0.4.6) (2018-02-24)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.5...v0.4.6)
 
