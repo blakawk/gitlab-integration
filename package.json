@@ -21,9 +21,12 @@
     }
   },
   "dependencies": {
+    "atom-space-pen-views": "^2.2.0",
     "git-url-parse": "^7.0.0",
     "request": "^2.83.0",
-    "request-promise-native": "^1.0.5"
+    "request-promise-native": "^1.0.5",
+    "moment": "^2.20.1",
+    "percentile": "^1.2.0"
   },
   "devDependencies": {
     "nock": "^9.0.14"

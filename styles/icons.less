@@ -20,6 +20,15 @@
     border-style: solid;
 }
 
+.gitlab-avatar {
+    width: 16px !important;
+    height: 16px !important;
+    vertical-align: -4px;
+    margin: 0;
+    padding: 0;
+    .gitlab-round;
+}
+
 .gitlab-created:before {
     .gitlab-icon(created);
     border-color: #c4c4c4;
@@ -69,6 +78,12 @@
     .gitlab-round;
 }
 
+.gitlab-artifact:before {
+    .gitlab-icon(download);
+    border-color: #2e2e2e;
+    fill: #2e2e2e;
+}
+
 .gitlab-canceled:before {
     .gitlab-icon(canceled);
     border-color: #2e2e2e;
@@ -96,4 +111,30 @@
     margin-left: 1px;
     width: 12px !important;
     height: 16px;
+}
+
+.progress-variant(@type) {
+  @text-color-name: "text-color-@{type}";
+
+  &::-webkit-progress-value {
+    background-color: @@text-color-name;
+  }
+}
+
+progress {
+  &.progress-info {
+    .progress-variant(info);
+  }
+
+  &.progress-success {
+    .progress-variant(success);
+  }
+
+  &.progress-warning {
+    .progress-variant(warning);
+  }
+
+  &.progress-error {
+    .progress-variant(error);
+  }
 }

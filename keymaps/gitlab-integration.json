@@ -1,0 +1,7 @@
+{
+  "atom-workspace": {
+    "shift-ctrl-alt-g": "gitlab-integration:open-gitlab-ci-cd",
+    "ctrl-alt-cmd-g": "gitlab-integration:reload",
+    "ctrl-alt-g": "gitlab-integration:open-failed-job-selector"
+  }
+}

@@ -4,6 +4,8 @@ GitUrlParse = require 'git-url-parse'
 StatusBarView = require './status-bar-view'
 GitlabStatus = require './gitlab'
 log = require './log'
+app = require('electron').app;
+moment = require 'moment'
 
 class GitlabIntegration
     config:
@@ -12,6 +14,11 @@ class GitlabIntegration
             description: 'Token to access your Gitlab API'
             type: 'string'
             default: ''
+        artifactReportPath:
+            title: 'Artifact report path'
+            description: 'Usefull to open your report such as protractor-screenshoter'
+            type: 'string'
+            default: 'storage/<JOB_NAME>/index.html'
         period:
             title: 'Polling period (ms)'
             description: 'The interval at which gitlab will be polled'
@@ -123,6 +130,8 @@ class GitlabIntegration
         )
 
     activate: (state) ->
+        if app
+          moment.locale(app.getLocale())
         @subscriptions = new CompositeDisposable
         @statusBarView = new StatusBarView
         @statusBarView.init()
@@ -133,6 +142,28 @@ class GitlabIntegration
                 "You likely forgot to configure your gitlab token",
                 {dismissable: true}
             )
+        if not atom.config.get('gitlab-integration.artifactReportPath')
+            atom.notifications.addInfo(
+                "You likely forgot to configure your gitlab artifact report path",
+                {dismissable: true}
+            )
+        atom.commands.add 'atom-workspace',
+          'gitlab-integration:open-gitlab-ci-cd': () =>
+            if @statusBarView?.currentProject isnt "<unknown>"
+              @gitlab.openGitlabCICD(@statusBarView.currentProject)
+
+        atom.commands.add 'atom-workspace',
+          'gitlab-integration:open-failed-job-selector': () =>
+            if @statusBarView?.currentProject isnt "<unknown>"
+              currentStages = @statusBarView?.stages[@statusBarView.currentProject]
+              failedStages = currentStages?.filter (stage) -> stage.status is 'failed'
+              if @statusBarView.currentProject and failedStages?.length > 0
+                    @gitlab.openJobSelector(@statusBarView.currentProject, failedStages[0])
+
+        atom.commands.add 'atom-workspace',
+          'gitlab-integration:reload': () =>
+              @gitlab.update()
+
         @handleProjects(atom.project.getDirectories())
         @subscriptions.add atom.project.onDidChangePaths (paths) =>
             @handleProjects(paths.map((path) => new Directory(path)))
