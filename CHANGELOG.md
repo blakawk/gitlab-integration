@@ -1,5 +1,13 @@
 # Change Log
 
+## [v0.4.8](https://github.com/blakawk/gitlab-integration/tree/v0.4.8) (2018-12-12)
+[Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.7...v0.4.8)
+
+**Closed issues:**
+
+- gitlab-integration doesn't recognize git clone through ssh [\#36](https://github.com/blakawk/gitlab-integration/issues/36)
+
+
 ## [v0.4.7](https://github.com/blakawk/gitlab-integration/tree/v0.4.7) (2018-04-10)
 [Full Changelog](https://github.com/blakawk/gitlab-integration/compare/v0.4.6...v0.4.7)
 
